@@ -43,7 +43,7 @@ class EventManager:
             typ = data[f"{data['post_type']}_type"]
             logger.log(f"不存在的事件类型：{data['post_type']}.{typ}", levels.WARNING)
             logger.log(str(data), levels.DEBUG)
-            return Event(data)
+            return UnrecognizedEvent(data)
 
 
 em = EventManager()
@@ -110,6 +110,10 @@ class Event(ABC):
 
     def print_log(self, **kwargs) -> None:
         ...
+
+
+class UnrecognizedEvent(Event):
+    pass
 
 
 class MessageEvent(Event):
