@@ -306,10 +306,10 @@ async def run() -> NoReturn:
                 # threading.Thread(target=lambda: __handler(data, actions), daemon=True).start()
                 logger.trace(str(data))
                 asyncio.create_task(__handler(data, actions))
-    except KeyboardInterrupt:
+    except asyncio.CancelledError:
         logger.warning("正在退出(Ctrl+C)")
         try:
-            connection.close()
+            await connection.close()
         except:
             pass
         sys.exit()

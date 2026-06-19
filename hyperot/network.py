@@ -33,8 +33,8 @@ class WebsocketConnection:
     async def send(self, message: str) -> None:
         await asyncio.to_thread(lambda: self.ws.send(message))
 
-    def close(self) -> None:
-        self.ws.close()
+    async def close(self) -> None:
+        await asyncio.to_thread(lambda: self.ws.close())
 
     async def recv(self) -> dict:
         return json.loads(await asyncio.to_thread(self.ws.recv))

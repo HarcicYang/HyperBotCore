@@ -1,3 +1,6 @@
+import signal
+from asyncio import tasks
+
 from . import configurator
 from .utils import screens
 
@@ -62,7 +65,17 @@ class Client:
         self.lis = listener
         self.lis.reg(self.distributor)
         if self.records:
-            await self.lis.run()
+            stop = asyncio.Event()
+            loop = asyncio.get_running_loop()
+            for i in (signal.SIGINT, signal.SIGTERM):
+                loop.add_signal_handler(i, stop.set)
+            task = asyncio.create_task(self.lis.run())
+            await stop.wait()
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
 
     def restart(self) -> None:
         self.lis.stop()
