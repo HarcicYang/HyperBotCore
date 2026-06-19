@@ -1,4 +1,4 @@
-import time
+import asyncio
 import os
 from hyperot import configurator
 
@@ -34,10 +34,10 @@ async def handler_msg(event: GroupMessageEvent, actions: listener.Actions):
         res = await actions.send("pong", group_id=event.group_id)
         msg_id = res.data.message_id
         await actions.send(Message(Text("Hello from HypeR Core"), Image(file=f"file://{os.path.abspath('./ban.png')}")), group_id=event.group_id)
-        time.sleep(3)
+        await asyncio.sleep(3)
         await actions.del_message(msg_id)
 
 
 with Client() as cli:
     cli.subscribe(handler_msg, GroupMessageEvent)
-    cli.run()
+    asyncio.get_event_loop().run_until_complete(cli.run())

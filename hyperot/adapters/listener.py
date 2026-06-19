@@ -77,7 +77,7 @@ def reg(func: Callable) -> None:
     ...
 
 
-def run() -> NoReturn:
+async def run() -> NoReturn:
     logger.error("你没有设置适配器！")
 
 

@@ -98,5 +98,5 @@ class Ret(Generic[T]):
         self.echo = json_data.get("echo")
 
     @classmethod
-    def fetch(cls, echo: str, serializer=ObjectedJson) -> Self:
-        return cls(reports.get(echo), serializer)
+    async def fetch(cls, echo: str, serializer=ObjectedJson) -> Self:
+        return cls(await reports.get(echo), serializer)

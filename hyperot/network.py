@@ -1,3 +1,4 @@
+import asyncio
 import websocket
 import httpx
 import queue
@@ -6,6 +7,15 @@ import traceback
 import json
 import logging
 import threading
+
+
+async def httpx_get(url: str, headers: dict = None) -> httpx.Response:
+    async with httpx.AsyncClient(headers=headers) as client:
+        return await client.get(url)
+
+async def httpx_post(url: str, json: dict, headers: dict = None) -> httpx.Response:
+    async with httpx.AsyncClient(headers=headers) as client:
+        return await client.post(url, json=json)
 
 
 class WebsocketConnection:
@@ -20,14 +30,14 @@ class WebsocketConnection:
         else:
             self.ws.connect(self.url)
 
-    def send(self, message: str) -> None:
-        self.ws.send(message)
+    async def send(self, message: str) -> None:
+        await asyncio.to_thread(lambda: self.ws.send(message))
 
     def close(self) -> None:
         self.ws.close()
 
-    def recv(self) -> dict:
-        return json.loads(self.ws.recv())
+    async def recv(self) -> dict:
+        return json.loads(await asyncio.to_thread(self.ws.recv))
 
 
 class HTTPConnection:
@@ -60,20 +70,20 @@ class HTTPConnection:
         threading.Thread(target=lambda: self.app.run(host=self.listener_url, port=self.port)).start()
         self.listener_started = True
 
-    def connect(self) -> None:
+    async def connect(self) -> None:
         if not self.listener_started:
             self.__start_listener()
-        httpx.post(self.url)
+        await httpx_post(self.url, {})
         traceback.print_exc()
 
-    def recv(self) -> dict:
+    async def recv(self) -> dict:
         return self.reports.get()
 
-    def send(self, endpoint: str, data: dict, echo: str) -> None:
+    async def send(self, endpoint: str, data: dict, echo: str) -> None:
         if self.auth:
-            response = httpx.post(f"{self.url}/{endpoint}", json=data, headers={"Authorization": f"Bearer {self.auth}"})
+            response = await httpx_post(f"{self.url}/{endpoint}", json=data, headers={"Authorization": f"Bearer {self.auth}"})
         else:
-            response = httpx.post(f"{self.url}/{endpoint}", json=data)
+            response = await httpx_post(f"{self.url}/{endpoint}", json=data)
         res = response.json()
         res["echo"] = echo
         self.reports.put(res)

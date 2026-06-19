@@ -33,7 +33,7 @@ class Actions:
                         str(item),
                         **kwargs
                     )
-                    packet.send_to(self.connection)
+                    await packet.send_to(self.connection)
                     return packet.echo
 
                 return wrapper
@@ -44,7 +44,7 @@ class Actions:
             self, message: Union[common.Message, str], group_id: int = None, user_id: int = None
     ) -> common.Ret[MsgSendRsp]:
         if group_id is None:
-            res = Packet(
+            res = await Packet(
                 "send_private_msg",
                 user_id=user_id,
                 message=to_milky_message(common.Message(message))
@@ -55,7 +55,7 @@ class Actions:
             ret.data = MsgSendRsp({"message_id": msg_enid(0, res["message_seq"], user_id)})
             return ret
         else:
-            res = Packet(
+            res = await Packet(
                 "send_group_msg",
                 group_id=group_id,
                 message=to_milky_message(common.Message(message))
@@ -128,11 +128,11 @@ async def tester(
     ...
 
 
-def __handler(data: Union[dict, HyperNotify], actions: Actions) -> None:
+async def __handler(data: Union[dict, HyperNotify], actions: Actions) -> None:
     if isinstance(data, dict):
-        asyncio.run(handler(events.em.new(data), actions))
+        await handler(events.em.new(data), actions)
     else:
-        asyncio.run(handler(data, actions))
+        await handler(data, actions)
 
 
 handler: callable = tester
@@ -146,7 +146,7 @@ def reg(func: callable) -> None:
 connection: MilkyHttpConnection
 
 
-def run() -> NoReturn:
+async def run() -> NoReturn:
     global connection, listener_ran
     listener_ran = True
     try:
@@ -181,7 +181,7 @@ def run() -> NoReturn:
                 notify_type="listener_start",
                 connection=connection
             )
-            threading.Thread(target=lambda: __handler(data, actions), daemon=True).start()
+            asyncio.create_task(__handler(data, actions))
             while True:
                 try:
                     data = connection.recv()
@@ -191,7 +191,7 @@ def run() -> NoReturn:
                 except json.decoder.JSONDecodeError:
                     logger.error("收到错误的JSON内容")
                     continue
-                threading.Thread(target=lambda: __handler(data, actions), daemon=True).start()
+                asyncio.create_task(__handler(data, actions))
     except KeyboardInterrupt:
         logger.warning("正在退出(Ctrl+C)")
         try:

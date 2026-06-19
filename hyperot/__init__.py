@@ -6,7 +6,7 @@ import asyncio
 import sys
 import os
 
-HYPER_BOT_VERSION = "0.81.2"
+HYPER_BOT_VERSION = "0.82.0"
 
 # listener = None
 
@@ -57,12 +57,12 @@ class Client:
         else:
             return
 
-    def run(self):
+    async def run(self):
         from . import listener
         self.lis = listener
         self.lis.reg(self.distributor)
         if self.records:
-            self.lis.run()
+            await self.lis.run()
 
     def restart(self) -> None:
         self.lis.stop()

@@ -1,7 +1,7 @@
 import httpx
 import json
 
-from hyperot.network import WebsocketConnection
+from hyperot.network import WebsocketConnection, httpx_post, httpx_get
 from ...common import Message
 from ...utils.logic import Matcher
 from ...adapters.obuilder import OneBotEventBuilder, OneBotJsonMessageBuilder
@@ -64,8 +64,8 @@ class MilkyHttpConnection(WebsocketConnection):
         else:
             self.ws.connect(self.url + "/event")
 
-    def recv(self) -> dict:
-        milky_rp = json.loads(self.ws.recv())
+    async def recv(self) -> dict:
+        milky_rp = json.loads(await self.ws.recv())
         milky_event_type = milky_rp["type"]
         milky_time = milky_rp["time"]
         milky_self_id = milky_rp["self_id"]
@@ -109,14 +109,14 @@ class MilkyHttpConnection(WebsocketConnection):
 
             return milky_rp
 
-    def http_send(self, endpoint: str, data: dict) -> dict:
+    async def http_send(self, endpoint: str, data: dict) -> dict:
         if not data:
             data = dict()
         if self.auth:
-            response = httpx.post(f"{self.url}/api/{endpoint}", json=data,
+            response = await httpx_post(f"{self.url}/api/{endpoint}", json=data,
                                   headers={"Authorization": f"Bearer {self.auth}"})
         else:
-            response = httpx.post(f"{self.url}/api/{endpoint}", json=data)
+            response = await httpx_post(f"{self.url}/api/{endpoint}", json=data)
         res = response.json()
         return res
 

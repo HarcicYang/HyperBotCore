@@ -1,7 +1,7 @@
 from . import configurator, hyperogger, common
 from .utils.typextensions import Integer
 from .segments import message_types, At
-from .network import KritorConnection, WebsocketConnection, HTTPConnection
+from .network import WebsocketConnection, HTTPConnection
 from .hyperogger import levels
 
 from abc import ABC
@@ -336,7 +336,7 @@ class HyperNotify:
 
 class HyperListenerStartNotify(HyperNotify):
     def __init__(self, time_now: int, notify_type: str,
-                 connection: Union[WebsocketConnection, HTTPConnection, KritorConnection] = None):
+                 connection: Union[WebsocketConnection, HTTPConnection] = None):
         super().__init__(time_now, notify_type)
         self.connection = connection
 

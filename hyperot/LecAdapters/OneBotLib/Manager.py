@@ -28,18 +28,18 @@ class Packet:
         self.paras = kwargs
         self.echo = f"{endpoint}_{random.randint(1000, 9999)}"
 
-    def send_to(self, connection: Union[network.WebsocketConnection, network.HTTPConnection]) -> None:
+    async def send_to(self, connection: Union[network.WebsocketConnection, network.HTTPConnection]) -> None:
         if isinstance(connection, network.WebsocketConnection):
             payload: OneBotJsonPacket = {
                 "action": self.endpoint,
                 "params": self.paras,
                 "echo": self.echo,
             }
-            connection.send(json.dumps(payload))
+            await connection.send(json.dumps(payload))
 
         elif isinstance(connection, network.HTTPConnection):
             payload = self.paras
-            connection.send(self.endpoint, payload, self.echo)
+            await connection.send(self.endpoint, payload, self.echo)
 
 
 

@@ -283,16 +283,17 @@ class KeyQueue:
     def __init__(self):
         self.contents = {}
 
-    def put(self, key: str, obj: Any) -> None:
+    async def put(self, key: str, obj: Any) -> None:
         if key in list(self.contents.keys()):
             return
         self.contents[key] = obj
 
-    def get(self, key: str) -> Any:
+    async def get(self, key: str) -> Any:
         while 1:
             try:
                 return self.contents[key]
             except KeyError:
+                await asyncio.sleep(0.01)
                 pass
 
 
