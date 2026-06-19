@@ -1,6 +1,4 @@
 import signal
-from asyncio import tasks
-
 from . import configurator
 from .utils import screens
 
@@ -9,7 +7,7 @@ import asyncio
 import sys
 import os
 
-HYPER_BOT_VERSION = "0.82.0"
+HYPER_BOT_VERSION = "0.82.1"
 
 # listener = None
 
@@ -93,3 +91,29 @@ class Client:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         pass
+
+
+def init(cfg_file: str = "config.json") -> "hyperogger.Logger":
+    from cfgr.manager import Serializers
+    try:
+        configurator.BotConfig.load_from(cfg_file, Serializers.JSON, "hyper-bot")
+    except FileNotFoundError:
+        configurator.BotConfig.create_and_write(cfg_file, Serializers.JSON)
+        print("没有找到配置文件，已自动创建，请填写后重启")
+        exit(-1)
+
+    if True:
+        from hyperot import hyperogger
+        from hyperot.adapters import builtins as adp
+
+        config = configurator.BotConfig.get("hyper-bot")
+        logger = hyperogger.Logger()
+        logger.set_level(config.log_level)
+
+        match config.protocol:
+            case "OneBot":
+                adp.load_onebot()
+            case _:
+                raise NotImplementedError
+
+    return logger
