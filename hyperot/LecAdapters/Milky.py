@@ -40,7 +40,7 @@ class Actions:
 
         self.custom = CustomAction(self.connection)
 
-    async def send(
+    async def send_msg(
             self, message: Union[common.Message, str], group_id: int = None, user_id: int = None
     ) -> common.Ret[MsgSendRsp]:
         if group_id is None:
@@ -65,8 +65,18 @@ class Actions:
             ret = common.Ret(res)
             ret.data = MsgSendRsp({"message_id": msg_enid(1, res["message_seq"], group_id)})
             return ret
+    
+    async def send_group_msg(
+            self, message: Union[common.Message, str], group_id: int = None
+    ) -> common.Ret[MsgSendRsp]:
+        return await self.send_msg(message, group_id=group_id)
 
-    async def del_message(self, message_id: int) -> None:
+    async def send_private_msg(
+            self, message: Union[common.Message, str], user_id: int = None
+    ) -> common.Ret[MsgSendRsp]:
+        return await self.send_msg(message, user_id=user_id)
+    
+    async def del_msg(self, message_id: int) -> None:
         ...
 
     async def set_group_kick(self, group_id: int, user_id: int) -> None:

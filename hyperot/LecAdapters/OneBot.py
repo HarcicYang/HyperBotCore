@@ -39,7 +39,7 @@ class Actions:
 
         self.custom = CustomAction(self.connection)
 
-    async def send(
+    async def send_msg(
             self, message: Union[common.Message, str], group_id: int = None, user_id: int = None
     ) -> common.Ret[MsgSendRsp]:
         if isinstance(message, str):
@@ -62,7 +62,17 @@ class Actions:
         logger.info(f"向{(('群 ' + str(group_id)) if group_id else ('用户' + str(user_id))) + ' '}发送：{str(message)}")
         return await common.Ret.fetch(packet.echo, MsgSendRsp)
 
-    async def del_message(self, message_id: int) -> None:
+    async def send_group_msg(
+            self, message: Union[common.Message, str], group_id: int = None
+    ) -> common.Ret[MsgSendRsp]:
+        return await self.send_msg(message, group_id=group_id)
+
+    async def send_private_msg(
+            self, message: Union[common.Message, str], user_id: int = None
+    ) -> common.Ret[MsgSendRsp]:
+        return await self.send_msg(message, user_id=user_id)
+
+    async def del_msg(self, message_id: int) -> None:
         await Packet(
             "delete_msg",
             message_id=message_id,

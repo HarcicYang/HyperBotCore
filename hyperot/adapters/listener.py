@@ -12,12 +12,22 @@ class Actions:
     def __init__(self):
         self.custom: type
 
-    async def send(
+    async def send_msg(
             self, message: Union[common.Message, str], group_id: int = None, user_id: int = None
     ) -> common.Ret[MsgSendRsp]:
         ...
 
-    async def del_message(self, message_id: int) -> None:
+    async def send_group_msg(
+            self, message: Union[common.Message, str], group_id: int = None
+    ) -> common.Ret[MsgSendRsp]:
+        ...
+
+    async def send_private_msg(
+            self, message: Union[common.Message, str], user_id: int = None
+    ) -> common.Ret[MsgSendRsp]:
+        ...
+
+    async def del_msg(self, message_id: int) -> None:
         ...
 
     async def set_group_kick(self, group_id: int, user_id: int) -> None:

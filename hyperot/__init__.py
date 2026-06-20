@@ -7,12 +7,31 @@ import sys
 import os
 import signal
 
-HYPER_BOT_VERSION = "0.82.1"
+HYPER_BOT_VERSION = "0.82.2"
 
 # listener = None
 
 screens.play_startup()
 screens.play_info(HYPER_BOT_VERSION)
+
+ANY_EVENT = Union[
+    "events.GroupMessageEvent",
+    "events.PrivateMessageEvent",
+    "events.GroupFileUploadEvent",
+    "events.GroupAdminEvent",
+    "events.GroupMemberDecreaseEvent",
+    "events.GroupMemberIncreaseEvent",
+    "events.GroupMuteEvent",
+    "events.FriendAddEvent",
+    "events.GroupRecallEvent",
+    "events.FriendRecallEvent",
+    "events.NotifyEvent",
+    "events.GroupEssenceEvent",
+    "events.MessageReactionEvent",
+    "events.GroupAddInviteEvent",
+    "events.HyperListenerStartNotify",
+    "events.HyperListenerStopNotify"
+]
 
 
 class Client:
@@ -23,25 +42,15 @@ class Client:
     def subscribe(
             self,
             func: Callable,
-            event: Union[
-                "events.GroupMessageEvent",
-                "events.PrivateMessageEvent",
-                "events.GroupFileUploadEvent",
-                "events.GroupAdminEvent",
-                "events.GroupMemberDecreaseEvent",
-                "events.GroupMemberIncreaseEvent",
-                "events.GroupMuteEvent",
-                "events.FriendAddEvent",
-                "events.GroupRecallEvent",
-                "events.FriendRecallEvent",
-                "events.NotifyEvent",
-                "events.GroupEssenceEvent",
-                "events.MessageReactionEvent",
-                "events.GroupAddInviteEvent",
-                "events.HyperListenerStartNotify",
-                "events.HyperListenerStopNotify"
-            ]
+            event: Union[ANY_EVENT, list[ANY_EVENT]]
     ) -> None:
+        if isinstance(event, list):
+            for e in event:
+                self._subscribe(func, e)
+        else:
+            self._subscribe(func, event)
+
+    def _subscribe(self, func: Callable, event: ANY_EVENT) -> None:
         if not self.records.get(event):
             self.records[event] = [func]
         else:
@@ -69,6 +78,7 @@ class Client:
             if sys.platform == "win32":
                 def _win32_handler(signum, frame):
                     stop.set()
+
                 signal.signal(signal.SIGINT, _win32_handler)
                 try:
                     signal.signal(signal.SIGBREAK, _win32_handler)
@@ -78,10 +88,11 @@ class Client:
                 async def _win32_wakeup():
                     while 1:
                         await asyncio.sleep(0.1)
+
                 _wakeup_task = asyncio.create_task(_win32_wakeup())
             else:
-                    for i in (signal.SIGINT, signal.SIGTERM):
-                        loop.add_signal_handler(i, stop.set)
+                for i in (signal.SIGINT, signal.SIGTERM):
+                    loop.add_signal_handler(i, stop.set)
             task = asyncio.create_task(self.lis.run())
             await stop.wait()
             if _wakeup_task:
