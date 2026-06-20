@@ -1,11 +1,11 @@
-import signal
 from . import configurator
 from .utils import screens
 
-from typing import Union
+from typing import Union, Callable
 import asyncio
 import sys
 import os
+import signal
 
 HYPER_BOT_VERSION = "0.82.1"
 
@@ -22,7 +22,7 @@ class Client:
 
     def subscribe(
             self,
-            func: callable,
+            func: Callable,
             event: Union[
                 "events.GroupMessageEvent",
                 "events.PrivateMessageEvent",
@@ -65,10 +65,27 @@ class Client:
         if self.records:
             stop = asyncio.Event()
             loop = asyncio.get_running_loop()
-            for i in (signal.SIGINT, signal.SIGTERM):
-                loop.add_signal_handler(i, stop.set)
+            _wakeup_task = None
+            if sys.platform == "win32":
+                def _win32_handler(signum, frame):
+                    stop.set()
+                signal.signal(signal.SIGINT, _win32_handler)
+                try:
+                    signal.signal(signal.SIGBREAK, _win32_handler)
+                except AttributeError:
+                    pass
+
+                async def _win32_wakeup():
+                    while 1:
+                        await asyncio.sleep(0.1)
+                _wakeup_task = asyncio.create_task(_win32_wakeup())
+            else:
+                    for i in (signal.SIGINT, signal.SIGTERM):
+                        loop.add_signal_handler(i, stop.set)
             task = asyncio.create_task(self.lis.run())
             await stop.wait()
+            if _wakeup_task:
+                _wakeup_task.cancel()
             task.cancel()
             try:
                 await task

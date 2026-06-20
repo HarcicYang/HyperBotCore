@@ -1,5 +1,4 @@
 import json
-import threading
 import time
 import asyncio
 import sys
@@ -11,7 +10,7 @@ from ..utils import errors, logic
 from ..utils.apiresponse import *
 from ..LecAdapters.OneBotLib.Manager import reports, Packet
 from ..events import *
-from ..utils.hypetyping import Any, Union, NoReturn
+from ..utils.hypetyping import Any, Union, NoReturn, Callable
 
 config = configurator.BotConfig.get("hyper-bot")
 logger = hyperogger.Logger()
@@ -27,7 +26,7 @@ class Actions:
             def __init__(self, cnt_i: Union[network.WebsocketConnection, network.HTTPConnection]):
                 self.connection = cnt_i
 
-            def __getattr__(self, item) -> callable:
+            def __getattr__(self, item) -> Callable:
                 async def wrapper(**kwargs) -> str:
                     packet = Packet(
                         str(item),
@@ -227,10 +226,10 @@ async def __handler(data: Union[dict, HyperNotify], actions: Actions) -> None:
         await handler(data, actions)
 
 
-handler: callable = tester
+handler: Callable = tester
 
 
-def reg(func: callable) -> None:
+def reg(func: Callable) -> None:
     global handler
     handler = func
 
@@ -244,6 +243,8 @@ class LagrangeOneBotService(IServiceBase):
         pass
 
     async def server(self, bot_config: configurator.BotConfig) -> None:
+        if isinstance(config.connection, dict):
+            raise errors.ListenerNotRegisteredError("未注册接收器")
         proc = subprocess.Popen(
             args=config.connection.ob_exec,
             cwd=config.connection.ob_startup_path,
@@ -274,7 +275,7 @@ async def run() -> NoReturn:
         while True:
             try:
                 connection.connect()
-            except ConnectionRefusedError or TimeoutError:
+            except (ConnectionRefusedError, TimeoutError):
                 if retried >= config.connection.retries:
                     logger.critical(f"重试次数达到最大值({config.connection.retries})，退出")
                     break
