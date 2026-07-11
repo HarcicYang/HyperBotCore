@@ -282,9 +282,9 @@ async def run() -> NoReturn:
         if config.connection.ob_auto_startup:
             LagrangeOneBotService(IServiceStartUp.MANUAL).run_in_thread(config)
 
-        while True:
+        while 1:
             try:
-                connection.connect()
+                await connection.connect()
             except (ConnectionRefusedError, TimeoutError):
                 if retried >= config.connection.retries:
                     logger.critical(f"重试次数达到最大值({config.connection.retries})，退出")

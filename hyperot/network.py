@@ -1,5 +1,3 @@
-import asyncio
-import websocket
 import httpx
 import queue
 import flask
@@ -7,6 +5,8 @@ import traceback
 import json
 import logging
 import threading
+from websockets.asyncio.client import connect as wsc
+from websockets.asyncio.client import ClientConnection
 
 
 async def httpx_get(url: str, headers: dict = None) -> httpx.Response:
@@ -19,29 +19,35 @@ async def httpx_post(url: str, json: dict, headers: dict = None) -> httpx.Respon
 
 
 class WebsocketConnection:
-    def __init__(self, url: str, auth: str = None):
-        self.ws = websocket.WebSocket()
+    def __init__(self, url: str, auth: str = ""):
+        self.ws: ClientConnection = None
         self.url = url
         self.auth = auth
 
-    def connect(self) -> None:
+    async def connect(self) -> None:
         if self.auth:
-            self.ws.connect(self.url, header={"Authorization": "Bearer " + self.auth})
+            self.ws = await wsc(self.url, header={"Authorization": "Bearer " + self.auth})
         else:
-            self.ws.connect(self.url)
+            self.ws = await wsc(self.url)
 
     async def send(self, message: str) -> None:
-        await asyncio.to_thread(lambda: self.ws.send(message))
+        if self.ws is None:
+            raise RuntimeError("没有建立连接")
+        await self.ws.send(message)
 
     async def close(self) -> None:
-        await asyncio.to_thread(lambda: self.ws.close())
+        if self.ws is None:
+            raise RuntimeError("没有建立连接")
+        await self.ws.close()
 
     async def recv(self) -> dict:
-        return json.loads(await asyncio.to_thread(self.ws.recv))
+        if self.ws is None:
+            raise RuntimeError("没有建立连接")
+        return json.loads(await self.ws.recv())
 
 
 class HTTPConnection:
-    def __init__(self, url: str, listener_url: str, listener_endpoint: str = "/", auth: str = None):
+    def __init__(self, url: str, listener_url: str, listener_endpoint: str = "/", auth: str = ""):
         self.url = url
         listener_url = listener_url.replace("http://", "")
         listener_url = listener_url.replace("https://", "")
