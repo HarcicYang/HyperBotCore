@@ -8,5 +8,5 @@ Flask~=3.0.0
 google~=3.0.0
 protobuf~=4.25.3
 setuptools~=70.0.0
-ucfgr
+ucfgr>=0.0.5
 PyYAML
