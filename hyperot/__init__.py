@@ -7,7 +7,7 @@ import sys
 import os
 import signal
 
-HYPER_BOT_VERSION = "0.82.2"
+HYPER_BOT_VERSION = "0.82.3"
 
 # listener = None
 
