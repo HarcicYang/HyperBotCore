@@ -1,7 +1,7 @@
 from . import configurator
 from .utils import screens
 
-from typing import Union, Callable
+from typing import Union, Callable, TYPE_CHECKING, Any
 import asyncio
 import sys
 import os
@@ -14,24 +14,33 @@ HYPER_BOT_VERSION = "0.82.3"
 screens.play_startup()
 screens.play_info(HYPER_BOT_VERSION)
 
-ANY_EVENT = Union[
-    "events.GroupMessageEvent",
-    "events.PrivateMessageEvent",
-    "events.GroupFileUploadEvent",
-    "events.GroupAdminEvent",
-    "events.GroupMemberDecreaseEvent",
-    "events.GroupMemberIncreaseEvent",
-    "events.GroupMuteEvent",
-    "events.FriendAddEvent",
-    "events.GroupRecallEvent",
-    "events.FriendRecallEvent",
-    "events.NotifyEvent",
-    "events.GroupEssenceEvent",
-    "events.MessageReactionEvent",
-    "events.GroupAddInviteEvent",
-    "events.HyperListenerStartNotify",
-    "events.HyperListenerStopNotify"
-]
+if TYPE_CHECKING:
+    from . import events, listener, hyperogger
+
+    ANY_EVENT = Union[
+        events.GroupMessageEvent,
+        events.PrivateMessageEvent,
+        events.GroupFileUploadEvent,
+        events.GroupAdminEvent,
+        events.GroupMemberDecreaseEvent,
+        events.GroupMemberIncreaseEvent,
+        events.GroupMuteEvent,
+        events.FriendAddEvent,
+        events.GroupRecallEvent,
+        events.FriendRecallEvent,
+        events.NotifyEvent,
+        events.GroupEssenceEvent,
+        events.MessageReactionEvent,
+        events.GroupAddInviteEvent,
+        events.HyperListenerStartNotify,
+        events.HyperListenerStopNotify
+    ]
+    LISTENER_ACTIONS = listener.Actions
+    LOGGER = hyperogger.Logger
+else:
+    ANY_EVENT = Any
+    LISTENER_ACTIONS = Any
+    LOGGER = Any
 
 
 class Client:
@@ -57,7 +66,7 @@ class Client:
             self.records[event].append(func)
 
     async def distributor(
-            self, message_data: Union["events.Event", "events.HyperNotify"], actions: "Listener.Actions"
+            self, message_data: Union["events.Event", "events.HyperNotify"], actions: LISTENER_ACTIONS
     ) -> None:
         if type(message_data) in list(self.records.keys()):
             tasks = []
@@ -76,7 +85,7 @@ class Client:
             loop = asyncio.get_running_loop()
             _wakeup_task = None
             if sys.platform == "win32":
-                def _win32_handler(signum, frame):
+                def _win32_handler(signum, frame):  # type: ignore
                     stop.set()
 
                 signal.signal(signal.SIGINT, _win32_handler)
@@ -92,7 +101,7 @@ class Client:
                 _wakeup_task = asyncio.create_task(_win32_wakeup())
             else:
                 for i in (signal.SIGINT, signal.SIGTERM):
-                    loop.add_signal_handler(i, stop.set)
+                    loop.add_signal_handler(i, stop.set)  # type: ignore
             task = asyncio.create_task(self.lis.run())
             await stop.wait()
             if _wakeup_task:
