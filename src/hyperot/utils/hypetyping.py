@@ -1,4 +1,4 @@
-from typing import Optional, TypeVar, TypedDict, Union, Any, Protocol, runtime_checkable, NoReturn, Callable, Literal
+from typing import Optional, TypedDict
 
 
 class OneBotJsonPacket(TypedDict):

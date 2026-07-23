@@ -1,11 +1,44 @@
 from . import configurator, hyperogger, common
-from .utils.typextensions import Integer
 from .segments import message_types, At
 from .network import WebsocketConnection, HTTPConnection
 from .hyperogger import levels
 
 from abc import ABC
-from typing import Union
+from typing import Union, Callable, Optional
+
+__all__ = [
+    "init",
+    "EventManager",
+    "em",
+    "GroupSender",
+    "PrivateSender",
+    "GroupAnonymous",
+    "gen_message",
+    "Event",
+    "UnrecognizedEvent",
+    "MessageEvent",
+    "PrivateMessageEvent",
+    "GroupMessageEvent",
+    "NoticeEvent",
+    "GroupFileUploadEvent",
+    "GroupAdminEvent",
+    "GroupMemberDecreaseEvent",
+    "GroupMemberIncreaseEvent",
+    "GroupMuteEvent",
+    "FriendAddEvent",
+    "GroupRecallEvent",
+    "FriendRecallEvent",
+    "NotifyEvent",
+    "GroupEssenceEvent",
+    "MessageReactionEvent",
+    "BotOnLineEvent",
+    "RequestEvent",
+    "FriendAddRequestEvent",
+    "GroupAddInviteEvent",
+    "HyperNotify",
+    "HyperListenerStartNotify",
+    "HyperListenerStopNotify",
+]
 
 config: configurator.BotConfig
 logger: hyperogger.Logger
@@ -27,7 +60,7 @@ class EventManager:
         }
         self.events = []
 
-    def reg(self, type_of: str, str_eql: str) -> callable:
+    def reg(self, type_of: str, str_eql: str) -> Callable:
         def wrapper(cls):
             self.event_lis[type_of][str_eql] = cls
             self.events.append(cls)
@@ -99,12 +132,12 @@ class Event(ABC):
     def __init__(self, data: dict):
         self.data = data.copy()
         self.time = data.get("time")
-        self.self_id = data.get("self_id")
+        self.self_id = data.get("self_id", 0)
         self.post_type = data.get("post_type")
         self.user_id = data.get("user_id")
         self.group_id = data.get("group_id")
 
-        self.is_owner = Integer.convert_from(self.user_id) in config.owner
+        self.is_owner = self.self_id in config.owner
         self.blocked = True if self.user_id in config.black_list or self.group_id in config.black_list else False
         self.is_silent = self.user_id in config.silents or self.group_id in config.silents or 0 in config.silents
 
@@ -129,7 +162,7 @@ class MessageEvent(Event):
 class PrivateMessageEvent(MessageEvent):
     def __init__(self, data: dict):
         super().__init__(data)
-        self.sender = PrivateSender(data.get("sender"))
+        self.sender = PrivateSender(data.get("sender"))  # type: ignore
 
         self.print_log()
 
@@ -141,8 +174,8 @@ class PrivateMessageEvent(MessageEvent):
 class GroupMessageEvent(MessageEvent):
     def __init__(self, data: dict):
         super().__init__(data)
-        self.sender = GroupSender(data.get("sender"))
-        self.anonymous = GroupAnonymous(data.get("anonymous"))
+        self.sender = GroupSender(data.get("sender"))  # type: ignore
+        self.anonymous = GroupAnonymous(data.get("anonymous"))  # type: ignore
         self.is_mentioned = True if At(str(self.self_id)) in self.message else False
 
         self.print_log()
@@ -336,7 +369,7 @@ class HyperNotify:
 
 class HyperListenerStartNotify(HyperNotify):
     def __init__(self, time_now: int, notify_type: str,
-                 connection: Union[WebsocketConnection, HTTPConnection] = None):
+                 connection: Optional[Union[WebsocketConnection, HTTPConnection]] = None):
         super().__init__(time_now, notify_type)
         self.connection = connection
 

@@ -1,4 +1,3 @@
-import httpx
 import json
 
 from hyperot.network import WebsocketConnection, httpx_post, httpx_get

@@ -1,6 +1,6 @@
-from ..utils.hypetyping import Any, NoReturn, TypeVar, Callable
+from typing import Any, NoReturn, TypeVar, Callable
 from ..utils.apiresponse import *
-from ..events import *
+from .. import hyperogger, common, configurator
 
 config = configurator.BotConfig.get("hyper-bot")
 logger = hyperogger.Logger()

@@ -1,0 +1,17 @@
+Metadata-Version: 2.4
+Name: hyper-bot
+Version: 0.82.4
+Summary: 稳定高效、易于开发的QQ Bot框架
+Author-email: Harcic <harcic@outlook.com>
+Project-URL: repository, https://github.com/HarcicYang/HypeR_Bot
+Requires-Python: >=3.10
+License-File: LICENSE
+Requires-Dist: setuptools
+Requires-Dist: aiohttp~=3.9.5
+Requires-Dist: requests~=2.31.0
+Requires-Dist: httpx~=0.26.0
+Requires-Dist: websockets
+Requires-Dist: Flask~=3.0.0
+Requires-Dist: ucfgr>=0.0.5
+Requires-Dist: PyYAML
+Dynamic: license-file

@@ -6,6 +6,14 @@ import sys
 from .utils.screens import color_txt, rgb, NerdICONs
 from . import configurator
 
+__all__ = [
+    "config",
+    "nf_icons",
+    "Levels",
+    "levels",
+    "Logger",
+]
+
 
 config = configurator.BotConfig.get("hyper-bot")
 nf_icons = NerdICONs(config.log_use_nf)
@@ -53,9 +61,6 @@ class Logger:
         c = cls()
         c.set_level(level)
         cls.running_loggers[key] = c
-        # print(key)
-        # print(c)
-        # print(cls.running_loggers)
         return c
 
     @classmethod

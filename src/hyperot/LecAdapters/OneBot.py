@@ -2,15 +2,13 @@ import json
 import time
 import asyncio
 import sys
-import subprocess
+from typing import Union, Callable
 
-from .. import network, events, common, segments
-from ..service import FuncCall, IServiceBase, IServiceStartUp
-from ..utils import errors, logic
+from .. import network, events, common, segments, configurator, hyperogger
+from ..utils import errors
 from ..utils.apiresponse import *
 from ..LecAdapters.OneBotLib.Manager import reports, Packet
 from ..events import *
-from ..utils.hypetyping import Any, Union, NoReturn, Callable
 
 config = configurator.BotConfig.get("hyper-bot")
 logger = hyperogger.Logger()
@@ -40,17 +38,17 @@ class Actions:
         self.custom = CustomAction(self.connection)
 
     async def send_msg(
-            self, message: Union[common.Message, str], group_id: int = None, user_id: int = None
+            self, message: Union[common.Message, str], group_id: int = 0, user_id: int = 0
     ) -> common.Ret[MsgSendRsp]:
         if isinstance(message, str):
             message = common.Message(segments.Text(message))
-        if group_id is not None:
+        if group_id:
             packet = Packet(
                 "send_msg",
                 group_id=group_id,
                 message=await message.get()
             )
-        elif user_id is not None:
+        elif user_id:
             packet = Packet(
                 "send_msg",
                 user_id=user_id,
@@ -62,14 +60,10 @@ class Actions:
         logger.info(f"向{(('群 ' + str(group_id)) if group_id else ('用户' + str(user_id))) + ' '}发送：{str(message)}")
         return await common.Ret.fetch(packet.echo, MsgSendRsp)
 
-    async def send_group_msg(
-            self, message: Union[common.Message, str], group_id: int = None
-    ) -> common.Ret[MsgSendRsp]:
+    async def send_group_msg(self, message: Union[common.Message, str], group_id: int) -> common.Ret[MsgSendRsp]:
         return await self.send_msg(message, group_id=group_id)
 
-    async def send_private_msg(
-            self, message: Union[common.Message, str], user_id: int = None
-    ) -> common.Ret[MsgSendRsp]:
+    async def send_private_msg(self, message: Union[common.Message, str], user_id: int) -> common.Ret[MsgSendRsp]:
         return await self.send_msg(message, user_id=user_id)
 
     async def del_msg(self, message_id: int) -> None:
@@ -247,40 +241,20 @@ def reg(func: Callable) -> None:
 connection: Union[network.WebsocketConnection, network.HTTPConnection]
 
 
-class LagrangeOneBotService(IServiceBase):
-
-    def handler(self, func: FuncCall) -> Any:
-        pass
-
-    async def server(self, bot_config: configurator.BotConfig) -> None:
-        if isinstance(config.connection, dict):
-            raise errors.ListenerNotRegisteredError("未注册接收器")
-        proc = subprocess.Popen(
-            args=config.connection.ob_exec,
-            cwd=config.connection.ob_startup_path,
-            stdout=subprocess.PIPE
-        )
-        if bot_config.connection.ob_log_output:
-            for i in proc.stdout:
-                print(i.decode(), end="")
-
-
-async def run() -> NoReturn:
+async def run() -> None:
     global connection, listener_ran
     listener_ran = True
     try:
         if handler is tester:
             raise errors.ListenerNotRegisteredError("No handler registered")
         if isinstance(config.connection, configurator.BotWSC):
-            connection = network.WebsocketConnection(f"ws://{config.connection.host}:{config.connection.port}")
+            connection = network.WebsocketConnection(f"ws://{config.connection.host}:{config.connection.port}/")
         elif isinstance(config.connection, configurator.BotHTTPC):
             connection = network.HTTPConnection(
                 url=f"http://{config.connection.host}:{config.connection.port}",
                 listener_url=f"http://{config.connection.listener_host}:{config.connection.listener_port}"
             )
         retried = 0
-        if config.connection.ob_auto_startup:
-            LagrangeOneBotService(IServiceStartUp.MANUAL).run_in_thread(config)
 
         while 1:
             try:
@@ -292,7 +266,7 @@ async def run() -> NoReturn:
 
                 logger.warning(f"连接建立失败，3秒后重试({retried}/{config.connection.retries})")
                 retried += 1
-                time.sleep(3)
+                await asyncio.sleep(3)
                 continue
             retried = 0
             logger.info(f"成功在 {connection.url} 建立连接")

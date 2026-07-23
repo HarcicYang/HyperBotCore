@@ -1,16 +1,50 @@
 import dataclasses
 import json
 import os.path
-import typing
 import uuid
+from typing import Union, TYPE_CHECKING, Any, Optional
 
 from .utils.errors import *
-from .utils.hypetyping import Union
 from . import configurator
 
 config = configurator.BotConfig.get("hyper-bot")
 
 from .adapters.res import SegmentBase, message_types
+
+if TYPE_CHECKING:
+    from common import Message
+
+else:
+    Message = Any
+
+__all__ = [
+    "message_types",
+    "MediaSeg",
+    "Text",
+    "StreamTest",
+    "Image",
+    "At",
+    "Reply",
+    "Faces",
+    "Record",
+    "Video",
+    "Poke",
+    "Contact",
+    "Forward",
+    "Node",
+    "CustomNode",
+    "KeyBoardButton",
+    "KeyBoardRow",
+    "KeyBoard",
+    "MarkdownContent",
+    "MarkDown",
+    "LongMessage",
+    "Json",
+    "MarketFace",
+    "Dice",
+    "Rps",
+    "Music",
+]
 
 
 class MediaSeg(SegmentBase):
@@ -108,7 +142,7 @@ class Forward(SegmentBase, st="forward", su="[Forward]"):
 class Node(SegmentBase, st="node", su="[Node]"):
     user_id: str
     nickname: str
-    content: Union[dict, "common.Message"]
+    content: Union[dict, Message]
 
 
 class CustomNode:
@@ -159,7 +193,7 @@ class KeyBoardButton:
 
 
 class KeyBoardRow:
-    def __init__(self, buttons: list[KeyBoardButton] = None):
+    def __init__(self, buttons: Optional[list[KeyBoardButton]] = None):
         self.content = {
             "buttons": []
         }
@@ -220,7 +254,7 @@ class LongMessage(SegmentBase, st="longmsg", su="[Long: <id>]"):
 
 @dataclasses.dataclass
 class Json(SegmentBase, st="json", su="[Json]"):
-    data: typing.Union[dict, list, str]
+    data: Union[dict, list, str]
 
 
 @dataclasses.dataclass

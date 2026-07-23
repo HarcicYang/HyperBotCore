@@ -1,12 +1,11 @@
-from ... import configurator, hyperogger, network
-from ...utils import logic
+from ... import configurator, hyperogger, network, utils
 from ...utils.hypetyping import OneBotJsonPacket
 
 from typing import Union
 import random
 import json
 
-reports = logic.KeyQueue()
+reports = utils.KeyQueue()
 
 config: configurator.BotConfig
 logger: hyperogger.Logger

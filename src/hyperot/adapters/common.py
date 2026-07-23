@@ -1,6 +1,7 @@
+from .. import utils
 from ..utils import logic
 
-reports = logic.KeyQueue()
+reports = utils.KeyQueue()
 
 
 def init() -> None:

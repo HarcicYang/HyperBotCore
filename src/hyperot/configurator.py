@@ -1,6 +1,13 @@
 from cfgr.manager import BaseConfig
 
 
+__all__ = [
+    "BotConfig",
+    "BotWSC",
+    "BotHTTPC"
+]
+
+
 class BotWSC(BaseConfig):
     mode: str = "FWS"
     ob_auto_startup: bool = False
@@ -43,10 +50,14 @@ class BotConfig(BaseConfig):
     others: dict
 
     def custom_post(self, **kwargs):
-        if self.protocol == "OneBot":
-            if self.connection["mode"] == "FWS":
-                self.connection = BotWSC(**self.connection)
-            elif self.connection["mode"] == "HTTPC":
-                self.connection = BotHTTPC(**self.connection)
-        elif self.protocol == "Kritor":
-            self.connection = BotWSC(**self.connection)
+        if isinstance(self.connection, dict):
+            if self.protocol == "OneBot":
+                if self.connection["mode"] == "FWS":
+                    self.connection = BotWSC(**self.connection)
+                elif self.connection["mode"] == "HTTPC":
+                    self.connection = BotHTTPC(**self.connection)
+        else:
+            raise TypeError()
+
+        if isinstance(self.connection, dict):
+            raise TypeError()

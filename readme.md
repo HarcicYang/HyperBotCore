@@ -19,55 +19,11 @@ HypeR Core 是一个适配OneBot协议的机器人框架，旨在提供一个简
 
 [先前项目](https://github.com/HarcicYang/HypeR_Bot)
 
-## ~~使用 `hytil` 快速开始~~
-
----
-
-### 🚧 该功能为老旧项目 HypeR Bot 设计，尚不适用于 HypeR Core，并且可能在以后被移除。
-
----
-
-
-`hytil` 于 HypeR Bot 0.81.0 版本加入，是一个支持您快速配置完整 HypeR Bot 的实用工具。
-
-### 安装 HypeR Bot
+## 安装 HypeR Bot
 
 ```shell
 pip install hyper_bot
 ```
-
-### 使用 `hytil`
-
-```shell
-$ python -m hytil
-usage: hytil.py [-h] [-v] [-i] [-p PATH]
-
-HypeR Bot Utils 版本 0.0.1
-
-options:
-  -h, --help            show this help message and exit
-  -v, --version         显示版本信息
-  -i, --install         安装完整的HypeR Bot到本地
-  -p PATH, --path PATH  指定操作路径
-
-```
-
-在开始前，确认一个空文件夹，该文件夹将用于安装 HypeR Bot。
-
-```shell
-$ mkdir bot
-$ ls
-bot ...
-```
-
-现在，使用如下命令将完整的 HypeR Bot 下载到本地：
-
-```shell
-python -m hytil -i -p ./bot
-```
-
-下载完成后，您将会收到运行 `main.py` 的提示，此时，请您进入安装目录，在该目录下执行`python main.py`，配置文件 `config.json`
-将随后创建，请根据下方指引编辑配置文件。
 
 ## 配置文件
 
@@ -110,16 +66,15 @@ python -m hytil -i -p ./bot
 
 ### 关于该项目中使用的 ucfgr / cfgr
 
-[ucfgr](https://pypi.org/project/ucfgr/) 是本人早年间开发的配置文件管理器，但是我似乎一直都忘了公开他...
+[ucfgr](https://pypi.org/project/ucfgr/) 是本人早年间开发的配置文件管理器.
 
 该项目设计为支持类型注解，允许一次读取、处处获取，并且无需多次定义就可以自由切换文件格式，支持文件自动创建。
 
-目前设计支持 YAML 和 JSON 格式。
+目前设计支持 YAML 和 JSON 格式.
 
 > The universal config file manager for python
 
 ## 环境
 
-本人开发和测试均在Python 3.11.7环境进行，其他版本未经测试，理论上支持 Python 3.9 及以上版本。
+HyperBotCore 使用 uv.
 
-所需的第三方库陈列在[`requirements.txt`](/requirements.txt)中，使用`pip install -r requirements.txt`即可。

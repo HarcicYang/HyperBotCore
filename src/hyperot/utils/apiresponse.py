@@ -4,6 +4,19 @@ from typing import Union, Literal
 from ..events import PrivateSender, GroupSender, gen_message
 from ..common import Message
 
+__all__ = [
+    "BaseResponse",
+    "MsgSendRsp",
+    "GetLoginInfoRsp",
+    "GetVerInfoRsp",
+    "SendForwardRsp",
+    "SendGrpForwardRsp",
+    "GetStrInfoRsp",
+    "GetGrpMemInfoRsp",
+    "GetGrpInfoRsp",
+    "GetMsgRsp",
+]
+
 
 class BaseResponse(ABC):
     def __init__(self, json_data: Union[dict, str]):

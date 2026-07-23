@@ -1,0 +1,8 @@
+setuptools
+aiohttp~=3.9.5
+requests~=2.31.0
+httpx~=0.26.0
+websockets
+Flask~=3.0.0
+ucfgr>=0.0.5
+PyYAML

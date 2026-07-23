@@ -1,14 +1,14 @@
 import base64
 import time
-import httpx
 import json
 import urllib
 from urllib import parse
 
+from ..network import httpx_get, httpx_post
 from ..listener import Actions
 from ..common import Ret
 
-def _uid_and_uid_key(uin, pskey):
+async def _uid_and_uid_key(uin, pskey):
     url = "https://docs.qq.com/api/user/qq/login"
 
     headers = {
@@ -18,7 +18,7 @@ def _uid_and_uid_key(uin, pskey):
         'Cookie': f"p_uin={uin}; uin={uin}; p_skey={pskey}"
     }
 
-    response = httpx.get(url, headers=headers, verify=False).json()
+    response = (await httpx_get(url, headers=headers)).json()
 
     if response["retcode"] == 0:
         return response["result"]
@@ -26,7 +26,7 @@ def _uid_and_uid_key(uin, pskey):
         return response["msg"]
 
 
-def _music_card(uid, uidkey, uin, pskey, data):
+async def _music_card(uid, uidkey, uin, pskey, data):
     title = data["title"]
     desc = data["desc"]
     jumpUrl = data["jumpUrl"]
@@ -64,19 +64,18 @@ def _music_card(uid, uidkey, uin, pskey, data):
         },
         "prompt": f"[分享]{title}", "ver": "0.0.0.1", "view": "music"
     }
-    return _any_card(uid, uidkey, uin, pskey, ark)
+    return await _any_card(uid, uidkey, uin, pskey, ark)
 
 
-def _any_card(uid: str, uidkey: str, uin: int, pskey: str, ark: dict):
+async def _any_card(uid: str, uidkey: str, uin: int, pskey: str, ark: dict):
     url = "https://docs.qq.com/v2/push/ark_sig"
 
     payload = {
         "ark": "",
-        "object_id": "YjONkUwkdtFr"  # 请不要动人家qaq
+        "object_id": "YjONkUwkdtFr"
     }
 
     payload["ark"] = json.dumps(ark)
-    payload = json.dumps(payload)
 
     headers = {
         'User-Agent': "",
@@ -84,8 +83,7 @@ def _any_card(uid: str, uidkey: str, uin: int, pskey: str, ark: dict):
         'Cookie': f"uid={uid}; uid_key={uidkey}; p_uin={uin}; p_skey={pskey}"
     }
 
-    # noinspection PyTypeChecker
-    response = httpx.post(url, data=payload, headers=headers, verify=False)
+    response = await httpx_post(url, json=payload, headers=headers)
 
     return response.json()
 
@@ -115,8 +113,7 @@ async def get_pic(actions: Actions, uin: int, path: str) -> str:
         'Cookie': f"p_uin={uin}; p_skey={pskey}; skey={skey}; uin={uin}"
     }
 
-    # noinspection PyTypeChecker
-    response = httpx.post(url, data=payload, headers=headers, verify=False).json()
+    response = (await httpx_post(url, data=payload, headers=headers)).json()
     if response["retcode"] == 0:
         return response["data"]["url"]["origin"].replace("p.qpic.cn", "p.qlogo.cn")
     else:
@@ -159,16 +156,16 @@ class Card:
     async def get_sig(self, actions: Actions, uin: int) -> str:
         echo = await actions.custom.get_cookies(domain="docs.qq.com")
         p_skey = Ret.fetch(echo).data.cookies
-        data = _uid_and_uid_key(uin, p_skey)
+        data = await _uid_and_uid_key(uin, p_skey)
         if self.is_m:
             return (
-                _music_card(data["uid"], data["uid_key"], uin, p_skey, self.get_raw())
+                (await _music_card(data["uid"], data["uid_key"], uin, p_skey, self.get_raw()))
                 .get("result")
                 .get("ark_with_sig")
             )
         else:
             return (
-                _any_card(data["uid"], data["uid_key"], uin, p_skey, self.get_raw())
+                (await _any_card(data["uid"], data["uid_key"], uin, p_skey, self.get_raw()))
                 .get("result")
                 .get("ark_with_sig")
             )

@@ -1,9 +1,9 @@
+from typing import Generic, Type, Self, TypeVar
+
 from . import configurator
 from .utils.typextensions import ObjectedJson
 from . import segments
-from .utils.hypetyping import TypeVar
 
-from typing import Generic, Type, Self
 
 config = configurator.BotConfig.get("hyper-bot")
 T = TypeVar("T")

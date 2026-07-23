@@ -7,20 +7,21 @@ import logging
 import threading
 from websockets.asyncio.client import connect as wsc
 from websockets.asyncio.client import ClientConnection
+from typing import Optional, Dict
 
 
-async def httpx_get(url: str, headers: dict = None) -> httpx.Response:
+async def httpx_get(url: str, headers: Optional[Dict] = None) -> httpx.Response:
     async with httpx.AsyncClient(headers=headers) as client:
         return await client.get(url)
 
-async def httpx_post(url: str, json: dict, headers: dict = None) -> httpx.Response:
+async def httpx_post(url: str, json: Optional[dict] = None, data: Optional[str] = None, headers: Optional[Dict] = None) -> httpx.Response:
     async with httpx.AsyncClient(headers=headers) as client:
-        return await client.post(url, json=json)
+        return await client.post(url, json=json, data=data)
 
 
 class WebsocketConnection:
     def __init__(self, url: str, auth: str = ""):
-        self.ws: ClientConnection = None
+        self.ws: Optional[ClientConnection] = None
         self.url = url
         self.auth = auth
 
