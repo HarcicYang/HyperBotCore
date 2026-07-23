@@ -4,6 +4,8 @@ import asyncio
 import sys
 from typing import Union, Callable
 
+import websockets
+
 from .. import network, events, common, segments, configurator, hyperogger
 from ..utils import errors
 from ..utils.apiresponse import *
@@ -282,7 +284,7 @@ async def run() -> None:
             while True:
                 try:
                     data = await connection.recv()
-                except ConnectionResetError:
+                except websockets.exceptions.ConnectionClosedError:
                     logger.error("连接断开")
                     break
                 except json.decoder.JSONDecodeError:
