@@ -2,7 +2,7 @@ import dataclasses
 import json
 import os.path
 import uuid
-from typing import Union, TYPE_CHECKING, Any, Optional
+from typing import Union, TYPE_CHECKING, Any
 
 from .utils.errors import *
 from . import configurator
@@ -134,11 +134,6 @@ class Contact(SegmentBase, st="contact"):
 
 
 @dataclasses.dataclass
-class Forward(SegmentBase, st="forward", su="[Forward]"):
-    id: str
-
-
-@dataclasses.dataclass
 class Node(SegmentBase, st="node", su="[Node]"):
     user_id: str
     nickname: str
@@ -155,6 +150,12 @@ class CustomNode:
 
     def __str__(self) -> str:
         return f"[自定义节点]"
+
+
+@dataclasses.dataclass
+class Forward(SegmentBase, st="forward", su="[Forward]"):
+    content: list
+    id: str = ""
 
 
 class KeyBoardButton:
