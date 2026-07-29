@@ -1,13 +1,19 @@
-from . import configurator
-from .utils import screens
-
+from importlib.metadata import version, PackageNotFoundError
 from typing import Union, Callable, TYPE_CHECKING, Any
 import asyncio
 import sys
 import os
 import signal
 
-HYPER_BOT_VERSION = "0.82.5"
+from . import configurator
+from .utils import screens
+
+try:
+    __version__ = version("euler-onebot")
+except PackageNotFoundError:
+    __version__ = "unknown"
+
+HYPER_BOT_VERSION = __version__
 
 # listener = None
 
@@ -85,7 +91,7 @@ class Client:
             loop = asyncio.get_running_loop()
             _wakeup_task = None
             if sys.platform == "win32":
-                def _win32_handler(signum, frame):  # type: ignore
+                def _win32_handler(_signum, _frame):
                     stop.set()
 
                 signal.signal(signal.SIGINT, _win32_handler)
