@@ -1,14 +1,13 @@
 import asyncio
-import os
 
 import hyperot
 
 logger = hyperot.init("milky_config.json")
 
 from hyperot import Client, listener
-from hyperot.common import Message
 from hyperot.events import *
 from hyperot.segments import *
+from hyperot.utils import errors
 
 GROUP_ID = 623371208
 USER_ID = 2488529467
@@ -44,8 +43,8 @@ async def run_e2e(actions: listener.Actions):
     try:
         await actions.del_msg(res.data.message_id)
         print("  del_msg OK")
-    except Exception as e:
-        print(f"  del_msg 失败（已知协议端 bug：recall_private_message 500）: {type(e).__name__}: {e}")
+    except errors.ApiError as e:
+        print(f"  del_msg 失败（已知协议端 bug：recall_private_message 500）: {e}")
 
     print(f"=== E2E: 群信息 (群 {GROUP_ID}) ===")
     ginfo = await actions.get_group_info(GROUP_ID)
