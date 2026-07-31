@@ -1,5 +1,6 @@
 from abc import ABC
 from collections.abc import Callable
+from typing import Literal, cast
 
 from . import common, configurator, hyperogger
 from .hyperogger import levels
@@ -53,11 +54,11 @@ def init():
 
 class EventManager:
     def __init__(self):
-        self.event_lis = {"message": {}, "notice": {}, "request": {}}
-        self.events = []
+        self.event_lis: dict[str, dict[str, type[Event]]] = {"message": {}, "notice": {}, "request": {}}
+        self.events: list[type[Event]] = []
 
     def reg(self, type_of: str, str_eql: str) -> Callable:
-        def wrapper(cls):
+        def wrapper(cls: type[Event]) -> type[Event]:
             self.event_lis[type_of][str_eql] = cls
             self.events.append(cls)
             return cls
@@ -79,6 +80,16 @@ em = EventManager()
 
 
 class GroupSender:
+    user_id: int | None
+    nickname: str | None
+    sex: Literal["male", "female", "unknown"] | None
+    age: int | None
+    card: str | None
+    area: str | None
+    level: str | None
+    role: Literal["owner", "admin", "member"] | None
+    title: str | None
+
     def __init__(self, json_data: dict):
         self.user_id = json_data.get("user_id")
         self.nickname = json_data.get("nickname")
@@ -92,6 +103,11 @@ class GroupSender:
 
 
 class PrivateSender:
+    user_id: int | None
+    nickname: str | None
+    sex: Literal["male", "female", "unknown"] | None
+    age: int | None
+
     def __init__(self, json_data: dict):
         self.user_id = json_data.get("user_id")
         self.nickname = json_data.get("nickname")
@@ -100,7 +116,11 @@ class PrivateSender:
 
 
 class GroupAnonymous:
-    def __init__(self, json_data: dict):
+    id: str | None
+    name: str | None
+    flag: str | None
+
+    def __init__(self, json_data: dict | None):
         if json_data is None:
             pass
         else:
@@ -125,11 +145,21 @@ def gen_message(data: dict) -> common.Message:
 
 
 class Event(ABC):
+    data: dict
+    time: int
+    self_id: int
+    post_type: str
+    user_id: int | None
+    group_id: int | None
+    is_owner: bool
+    blocked: bool
+    is_silent: bool
+
     def __init__(self, data: dict):
         self.data = data.copy()
-        self.time = data.get("time")
+        self.time = cast(int, data.get("time"))
         self.self_id = data.get("self_id", 0)
-        self.post_type = data.get("post_type")
+        self.post_type = cast(str, data.get("post_type"))
         self.user_id = data.get("user_id")
         self.group_id = data.get("group_id")
 
@@ -137,7 +167,7 @@ class Event(ABC):
         self.blocked = self.user_id in config.black_list or self.group_id in config.black_list
         self.is_silent = self.user_id in config.silents or self.group_id in config.silents or 0 in config.silents
 
-    def print_log(self, **kwargs) -> None: ...
+    def print_log(self) -> None: ...
 
 
 class UnrecognizedEvent(Event):
@@ -145,6 +175,11 @@ class UnrecognizedEvent(Event):
 
 
 class MessageEvent(Event):
+    sub_type: str | None
+    message_id: str
+    message: common.Message
+    msg_str: str
+
     def __init__(self, data: dict):
         super().__init__(data)
         self.sub_type = data.get("sub_type")
@@ -155,6 +190,8 @@ class MessageEvent(Event):
 
 @em.reg("message", "private")
 class PrivateMessageEvent(MessageEvent):
+    sender: PrivateSender
+
     def __init__(self, data: dict):
         super().__init__(data)
         self.sender = PrivateSender(data.get("sender"))  # type: ignore
@@ -167,6 +204,10 @@ class PrivateMessageEvent(MessageEvent):
 
 @em.reg("message", "group")
 class GroupMessageEvent(MessageEvent):
+    sender: GroupSender
+    anonymous: GroupAnonymous
+    is_mentioned: bool
+
     def __init__(self, data: dict):
         super().__init__(data)
         self.sender = GroupSender(data.get("sender"))  # type: ignore
@@ -180,6 +221,8 @@ class GroupMessageEvent(MessageEvent):
 
 
 class NoticeEvent(Event):
+    notice_type: str | None
+
     def __init__(self, data: dict):
         super().__init__(data)
         self.notice_type = data.get("notice_type")
@@ -187,6 +230,8 @@ class NoticeEvent(Event):
 
 @em.reg("notice", "group_upload")
 class GroupFileUploadEvent(NoticeEvent):
+    file: dict | None
+
     def __init__(self, data: dict):
         super().__init__(data)
         self.file = data.get("file")
@@ -199,6 +244,8 @@ class GroupFileUploadEvent(NoticeEvent):
 
 @em.reg("notice", "group_admin")
 class GroupAdminEvent(NoticeEvent):
+    sub_type: Literal["set", "unset"] | None
+
     def __init__(self, data: dict):
         super().__init__(data)
         self.sub_type = data.get("sub_type")
@@ -213,6 +260,9 @@ class GroupAdminEvent(NoticeEvent):
 
 @em.reg("notice", "group_decrease")
 class GroupMemberDecreaseEvent(NoticeEvent):
+    sub_type: Literal["leave", "kick", "kick_me"] | None
+    operator_id: int | None
+
     def __init__(self, data: dict):
         super().__init__(data)
         self.sub_type = data.get("sub_type")
@@ -226,6 +276,9 @@ class GroupMemberDecreaseEvent(NoticeEvent):
 
 @em.reg("notice", "group_increase")
 class GroupMemberIncreaseEvent(NoticeEvent):
+    sub_type: Literal["approve", "invite"] | None
+    operator_id: int | None
+
     def __init__(self, data: dict):
         super().__init__(data)
         self.sub_type = data.get("sub_type")
@@ -239,6 +292,10 @@ class GroupMemberIncreaseEvent(NoticeEvent):
 
 @em.reg("notice", "group_ban")
 class GroupMuteEvent(NoticeEvent):
+    sub_type: Literal["ban", "lift_ban"] | None
+    operator_id: int | None
+    duration: int | None
+
     def __init__(self, data: dict):
         super().__init__(data)
         self.sub_type = data.get("sub_type")
@@ -266,6 +323,9 @@ class FriendAddEvent(NoticeEvent):
 
 @em.reg("notice", "group_recall")
 class GroupRecallEvent(NoticeEvent):
+    operator_id: int | None
+    message_id: int | None
+
     def __init__(self, data: dict):
         super().__init__(data)
         self.operator_id = data.get("operator_id")
@@ -279,6 +339,8 @@ class GroupRecallEvent(NoticeEvent):
 
 @em.reg("notice", "friend_recall")
 class FriendRecallEvent(NoticeEvent):
+    message_id: int | None
+
     def __init__(self, data: dict):
         super().__init__(data)
         self.message_id = data.get("message_id")
@@ -291,6 +353,10 @@ class FriendRecallEvent(NoticeEvent):
 
 @em.reg("notice", "notify")
 class NotifyEvent(NoticeEvent):
+    sub_type: Literal["poke", "lucky_king", "honor"] | None
+    target_id: int | None
+    honor_type: str | None
+
     def __init__(self, data: dict):
         super().__init__(data)
         self.sub_type = data.get("sub_type")
@@ -300,6 +366,11 @@ class NotifyEvent(NoticeEvent):
 
 @em.reg("notice", "essence")
 class GroupEssenceEvent(NoticeEvent):
+    sub_type: Literal["add", "remove"] | None
+    sender_id: int | None
+    operator_id: int | None
+    message_id: int | None
+
     def __init__(self, data: dict):
         super().__init__(data)
         self.sub_type = data.get("sub_type")
@@ -318,6 +389,12 @@ class GroupEssenceEvent(NoticeEvent):
 
 @em.reg("notice", "reaction")
 class MessageReactionEvent(NoticeEvent):
+    message_id: int | None
+    operator_id: int | None
+    sub_type: Literal["add", "remove"] | None
+    code: int | None
+    count: int | None
+
     def __init__(self, data: dict):
         super().__init__(data)
         self.message_id = data.get("message_id")
@@ -329,6 +406,8 @@ class MessageReactionEvent(NoticeEvent):
 
 @em.reg("notice", "bot_online")
 class BotOnLineEvent(NoticeEvent):
+    reason: str | None
+
     def __init__(self, data: dict):
         super().__init__(data)
         self.reason = data.get("reason")
@@ -340,6 +419,9 @@ class BotOnLineEvent(NoticeEvent):
 
 
 class RequestEvent(Event):
+    comment: str | None
+    flag: str | None
+
     def __init__(self, data: dict):
         super().__init__(data)
         self.comment = data.get("comment")
@@ -354,18 +436,25 @@ class FriendAddRequestEvent(RequestEvent):
 
 @em.reg("request", "group")
 class GroupAddInviteEvent(RequestEvent):
+    sub_type: Literal["add", "invite"] | None
+
     def __init__(self, data: dict):
         super().__init__(data)
         self.sub_type = data.get("sub_type")
 
 
 class HyperNotify:
+    time: int
+    type: str
+
     def __init__(self, time_now: int, notify_type: str):
         self.time = time_now
         self.type = notify_type
 
 
 class HyperListenerStartNotify(HyperNotify):
+    connection: WebsocketConnection | HTTPConnection | None
+
     def __init__(self, time_now: int, notify_type: str, connection: WebsocketConnection | HTTPConnection | None = None):
         super().__init__(time_now, notify_type)
         self.connection = connection
