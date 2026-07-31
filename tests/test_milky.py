@@ -43,7 +43,7 @@ def test_message_translator_basic():
 
 
 def test_message_translator_reply():
-    ob = message_translator([{"type": "reply", "data": {"seq": 42}}], 9, 1)
+    ob = message_translator([{"type": "reply", "data": {"message_seq": 42}}], 9, 1)
     assert ob == [{"type": "reply", "data": {"id": str(msg_enid(1, 42, 9))}}]
 
 
@@ -99,13 +99,13 @@ def test_outgoing_builder():
         {"type": "mention", "data": {"user_id": 1}},
         {"type": "mention_all", "data": {}},
         {"type": "face", "data": {"face_id": "f"}},
-        {"type": "reply", "data": {"seq": 3}},
+        {"type": "reply", "data": {"message_seq": 3}},
     ]
 
 
 def test_milky_seg_from_dict():
     assert milky_seg_from_dict({"type": "text", "data": {"text": "hi"}}) == {"type": "text", "data": {"text": "hi"}}
-    assert milky_seg_from_dict({"type": "at", "data": {"qq": "42"}}) == {"type": "mention", "data": {"user_id": "42"}}
+    assert milky_seg_from_dict({"type": "at", "data": {"qq": "42"}}) == {"type": "mention", "data": {"user_id": 42}}
     assert milky_seg_from_dict({"type": "at", "data": {"qq": "all"}}) == {"type": "mention_all", "data": {}}
     assert milky_seg_from_dict({"type": "face", "data": {"id": "1"}}) == {
         "type": "face",
@@ -113,7 +113,7 @@ def test_milky_seg_from_dict():
     }
     assert milky_seg_from_dict({"type": "reply", "data": {"id": str(msg_enid(1, 42, 9))}}) == {
         "type": "reply",
-        "data": {"seq": 42},
+        "data": {"message_seq": 42},
     }
 
 
@@ -147,7 +147,7 @@ def test_node_list_to_milky_forward():
                     "sender_name": "n",
                     "segments": [
                         {"type": "text", "data": {"text": "hi"}},
-                        {"type": "mention", "data": {"user_id": "2"}},
+                        {"type": "mention", "data": {"user_id": 2}},
                     ],
                 }
             ]
@@ -497,7 +497,7 @@ def test_milky_outgoing_seg_text():
 
 
 def test_milky_outgoing_seg_at():
-    assert MilkyAt(qq="42").milky_outgoing_seg() == {"type": "mention", "data": {"user_id": "42"}}
+    assert MilkyAt(qq="42").milky_outgoing_seg() == {"type": "mention", "data": {"user_id": 42}}
     assert MilkyAt(qq="all").milky_outgoing_seg() == {"type": "mention_all", "data": {}}
 
 

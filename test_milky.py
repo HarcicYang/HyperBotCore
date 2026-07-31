@@ -11,8 +11,6 @@ from hyperot.events import *
 from hyperot.segments import *
 from hyperot.utils import errors
 
-# 目标会话通过环境变量配置，未配置时跳过目标相关测试：
-#   MILKY_GROUP_ID=<群号>  MILKY_USER_ID=<好友QQ号>
 GROUP_ID = int(os.environ["MILKY_GROUP_ID"]) if os.environ.get("MILKY_GROUP_ID") else None
 USER_ID = int(os.environ["MILKY_USER_ID"]) if os.environ.get("MILKY_USER_ID") else None
 

@@ -38,7 +38,7 @@ class MilkyOutGoingSegBuilder:
         return self
 
     def reply(self, seq: int) -> "MilkyOutGoingSegBuilder":
-        self.segments.append({"type": "reply", "data": {"seq": seq}})
+        self.segments.append({"type": "reply", "data": {"message_seq": seq}})
         return self
 
     def image(self, uri: str, summary: str = "[Image]", sub_type: str = "normal") -> "MilkyOutGoingSegBuilder":
@@ -92,7 +92,7 @@ def message_translator(milky_message: list[dict], peer_id: int, scene: int = 0) 
             case "mention_all":
                 builder.at("all")
             case "reply":
-                builder.reply(message_id=str(msg_enid(scene, seg_data["seq"], peer_id)))
+                builder.reply(message_id=str(msg_enid(scene, seg_data["message_seq"], peer_id)))
             case "face":
                 builder.faces(face_id=seg_data["face_id"])
             case "record":
@@ -156,13 +156,17 @@ def _to_milky_seg(seg: dict) -> dict:
         case "at":
             if seg_data.get("qq") == "all":
                 return {"type": "mention_all", "data": {}}
-            return {"type": "mention", "data": {"user_id": seg_data.get("qq")}}
+            try:
+                uid = int(seg_data["qq"])
+            except (KeyError, TypeError, ValueError):
+                uid = seg_data.get("qq")
+            return {"type": "mention", "data": {"user_id": uid}}
         case "reply":
             try:
                 seq = msg_deid(int(seg_data["id"]))[1]
             except (KeyError, TypeError, ValueError):
                 seq = seg_data.get("id")
-            return {"type": "reply", "data": {"seq": seq}}
+            return {"type": "reply", "data": {"message_seq": seq}}
         case "face":
             return {
                 "type": "face",
