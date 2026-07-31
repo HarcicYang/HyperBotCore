@@ -54,7 +54,22 @@ For OneBot APIs not yet wrapped:
 await actions.custom.send_like(user_id=123456, times=10)
 ```
 
-The method name becomes the OneBot `action` field, and keyword arguments become the `params` dict. Returns a `str` echo ID.
+The method name becomes the OneBot `action` field, and keyword arguments become the `params` dict. Under OneBot it returns a `str` echo ID.
+
+> **Milky protocol difference**: `actions.custom` calls Milky API names and returns the response `data` dict directly (no echo mechanism). E.g. `await actions.custom.set_group_whole_mute(group_id=1, is_mute=True)`.
+
+## Milky Protocol Differences
+
+Under the [Milky protocol](milky.md), most methods behave the same, with these differences:
+
+| Method | Difference |
+|--------|------------|
+| `send_msg` / `del_msg` | `message_id` encodes `scene + seq + peer`; `del_msg` decodes it automatically and calls the matching recall API |
+| `get_version_info` | Maps to Milky's `get_impl_info` |
+| `get_stranger_info` | Maps to Milky's `get_user_profile` |
+| `get_status` | No Milky counterpart; returns an empty `Ret` |
+| `send_forward_msg` / `send_callback` | Not supported yet; raise `NotImplementedError` |
+| `actions.custom` | Returns the response `data` dict directly (see above) |
 
 ## Ret\<T\>
 

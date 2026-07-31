@@ -10,6 +10,7 @@ logger.set_level("DEBUG")
 logger.info("Info message")
 logger.warning("Warning")
 logger.error("Error")
+logger.exception("Exception")  # Call inside an except block; appends the traceback
 logger.debug("Debug")
 logger.trace("Trace")
 logger.critical("Critical")
@@ -18,6 +19,19 @@ logger.critical("Critical")
 logger2 = Logger.fetch("my_module")
 
 ```
+
+## Exceptions
+
+`hyperot.utils.errors` provides framework exceptions:
+
+| Exception | Description |
+|-----------|-------------|
+| `ArgsInvalidError` | Invalid API arguments (e.g. `send_msg` without a group/private target) |
+| `ListenerNotRegisteredError` | Listener has no registered handler |
+| `ButtonRowFulledError` | Keyboard button row is full (more than 5) |
+| `ConfigError` | Configuration error |
+| `BotOfflineError` | Bot offline |
+| `ApiError` | Abnormal protocol implementation API response (non-JSON, e.g. HTTP 500) |
 
 ## Forward Messages with CustomNode
 

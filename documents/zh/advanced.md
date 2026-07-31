@@ -10,6 +10,7 @@ logger.set_level("DEBUG")
 logger.info("信息")
 logger.warning("警告")
 logger.error("错误")
+logger.exception("异常")  # 在 except 块中调用，附带 traceback
 logger.debug("调试")
 logger.trace("追踪")
 logger.critical("严重")
@@ -17,6 +18,19 @@ logger.critical("严重")
 # 命名日志实例
 logger2 = Logger.fetch("my_module")
 ```
+
+## 异常类型
+
+`hyperot.utils.errors` 提供框架自定义异常：
+
+| 异常 | 说明 |
+|------|------|
+| `ArgsInvalidError` | API 参数无效（如 `send_msg` 未指定群/私聊目标） |
+| `ListenerNotRegisteredError` | 监听器未注册 handler |
+| `ButtonRowFulledError` | 键盘按钮行已满（超过 5 个） |
+| `ConfigError` | 配置错误 |
+| `BotOfflineError` | 机器人离线 |
+| `ApiError` | 协议端 API 响应异常（非 JSON 响应，如协议端 500） |
 
 ## 合并转发 CustomNode
 

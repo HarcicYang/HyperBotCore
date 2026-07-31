@@ -34,7 +34,11 @@
 | `GroupMemberDecreaseEvent` | 群成员减少 | `sub_type`、`operator_id` |
 | `GroupMemberIncreaseEvent` | 群成员增加 | `sub_type`、`operator_id` |
 | `GroupMuteEvent` | 禁言/解除禁言 | `sub_type`（`"ban"` / `"lift_ban"`）、`operator_id`、`duration` |
+| `GroupWholeMuteEvent` | 群全员禁言 | `sub_type`（`"mute"` / `"unmute"`）、`operator_id` |
+| `GroupNameChangeEvent` | 群名称变更 | `new_group_name`、`operator_id` |
+| `GroupInvitationEvent` | 他人邀请本机器人入群 | `invitation_seq`、`initiator_id`、`source_group_id` |
 | `FriendAddEvent` | 好友添加 | — |
+| `FriendFileUploadEvent` | 好友文件上传 | `file`（`{id, name, size, busid, hash}`） |
 | `GroupRecallEvent` | 群消息撤回 | `operator_id`、`message_id` |
 | `FriendRecallEvent` | 好友消息撤回 | `message_id` |
 | `NotifyEvent` | 戳一戳/龙王/群荣誉 | `sub_type`、`target_id`、`honor_type` |

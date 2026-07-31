@@ -54,7 +54,22 @@
 await actions.custom.send_like(user_id=123456, times=10)
 ```
 
-方法名即为 OneBot `action` 字段，关键字参数即为 `params` 字典。返回 `str` 类型的 echo ID。
+方法名即为 OneBot `action` 字段，关键字参数即为 `params` 字典。OneBot 下返回 `str` 类型的 echo ID。
+
+> **Milky 协议差异**：`actions.custom` 调用的是 Milky API 名，直接返回响应 `data` 字典（无 echo 机制）。如 `await actions.custom.set_group_whole_mute(group_id=1, is_mute=True)`。
+
+## Milky 协议差异
+
+[Milky 协议](milky.md) 下大部分方法行为一致，差异如下：
+
+| 方法 | 差异 |
+|------|------|
+| `send_msg` / `del_msg` | `message_id` 为 `场景 + 序号 + 会话` 的编码值，`del_msg` 自动解码并调用对应撤回 API |
+| `get_version_info` | 映射 Milky 的 `get_impl_info` |
+| `get_stranger_info` | 映射 Milky 的 `get_user_profile` |
+| `get_status` | Milky 无对应 API，返回空 `Ret` |
+| `send_forward_msg` / `send_callback` | 暂不支持，抛出 `NotImplementedError` |
+| `actions.custom` | 直接返回响应 `data` 字典（见上） |
 
 ## Ret\<T\>
 

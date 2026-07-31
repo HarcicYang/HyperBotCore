@@ -14,17 +14,26 @@ cd HyperBotCore
 uv sync
 ```
 
-## OneBot 实现
+## 协议实现
 
-HypeR Core 适配 OneBot v11 协议，你需要运行一个兼容的实现：
+HypeR Core 支持 OneBot v11 与 [Milky](milky.md) 两种协议，通过 `config.json` 的 `protocol` 字段切换。
+
+### OneBot v11 实现
 
 - [NapCat](https://github.com/NapNeko/NapCatQQ)
 - [LLOneBot](https://github.com/LLOneBot/LLOneBot)
 - [Lagrange.OneBot](https://github.com/LagrangeDev/Lagrange.Core)
 
+### Milky 实现
+
+- [Lagrange.Milky](https://github.com/LagrangeDev/Lagrange.Core)
+- [Yogurt](https://acidify.ntqqrev.org/yogurt/start)
+
+Milky 模式的配置与使用见 [Milky 协议](milky.md)。
+
 ## 快速开始
 
-1. 创建 `config.json`（详见[配置文件](configuration.md)）
+1. 创建 `config.json`（详见[配置文件](configuration.md)）；使用 Milky 协议则创建 `milky_config.json` 并调用 `hyperot.init("milky_config.json")`
 
 2. 编写机器人：
 
@@ -50,4 +59,4 @@ with Client() as cli:
     asyncio.get_event_loop().run_until_complete(cli.run())
 ```
 
-3. 启动 OneBot 实现，再运行你的 bot 脚本。
+3. 启动协议端实现，再运行你的 bot 脚本。

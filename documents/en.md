@@ -1,11 +1,12 @@
 # HypeR Bot Documentation
 
-HypeR Core is an asyncio-based QQ bot framework adapting the OneBot v11 protocol.
+HypeR Core is an asyncio-based QQ bot framework adapting both the OneBot v11 and Milky protocols.
 
 ## Sections
 
-- [Getting Started](en/getting-started.md) — Installation, OneBot setup, quick start
-- [Configuration](en/configuration.md) — `config.json` reference (FWS & HTTPC modes)
+- [Getting Started](en/getting-started.md) — Installation, protocol implementation setup, quick start
+- [Configuration](en/configuration.md) — `config.json` reference (FWS, HTTPC & Milky modes)
+- [Milky Protocol](en/milky.md) — Milky configuration, event mapping, supported features
 - [Client & Lifecycle](en/client.md) — `Client` class, `subscribe()`, `run()`, `restart()`
 - [Events](en/events.md) — All event types with attributes
 - [Messages & Segments](en/messages.md) — `Message`, segment types, builder, KeyBoard, MarkDown

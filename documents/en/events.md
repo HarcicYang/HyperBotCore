@@ -34,7 +34,11 @@ Every `Event` instance has:
 | `GroupMemberDecreaseEvent` | Member left/kicked | `sub_type`, `operator_id` |
 | `GroupMemberIncreaseEvent` | Member joined | `sub_type`, `operator_id` |
 | `GroupMuteEvent` | Member muted/unmuted | `sub_type` (`"ban"` / `"lift_ban"`), `operator_id`, `duration` |
+| `GroupWholeMuteEvent` | Group-wide mute toggled | `sub_type` (`"mute"` / `"unmute"`), `operator_id` |
+| `GroupNameChangeEvent` | Group name changed | `new_group_name`, `operator_id` |
+| `GroupInvitationEvent` | Bot invited to join a group | `invitation_seq`, `initiator_id`, `source_group_id` |
 | `FriendAddEvent` | Friend request received | — |
+| `FriendFileUploadEvent` | File uploaded by friend | `file` (`{id, name, size, busid, hash}`) |
 | `GroupRecallEvent` | Message recalled in group | `operator_id`, `message_id` |
 | `FriendRecallEvent` | Message recalled by friend | `message_id` |
 | `NotifyEvent` | Poke / lucky king / honor | `sub_type`, `target_id`, `honor_type` |

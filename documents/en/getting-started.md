@@ -14,17 +14,26 @@ cd HyperBotCore
 uv sync
 ```
 
-## OneBot Implementation
+## Protocol Implementations
 
-HyperBotCore adapts the OneBot v11 protocol. You need a compatible implementation running:
+HyperBotCore supports both the OneBot v11 and [Milky](milky.md) protocols, switched via the `protocol` field in `config.json`.
+
+### OneBot v11 Implementations
 
 - [NapCat](https://github.com/NapNeko/NapCatQQ)
 - [LLOneBot](https://github.com/LLOneBot/LLOneBot)
 - [Lagrange.OneBot](https://github.com/LagrangeDev/Lagrange.Core)
 
+### Milky Implementations
+
+- [Lagrange.Milky](https://github.com/LagrangeDev/Lagrange.Core)
+- [Yogurt](https://acidify.ntqqrev.org/yogurt/start)
+
+See [Milky Protocol](milky.md) for Milky configuration and usage.
+
 ## Quick Start
 
-1. Create `config.json` (see [Configuration](configuration.md))
+1. Create `config.json` (see [Configuration](configuration.md)); for Milky, create `milky_config.json` and call `hyperot.init("milky_config.json")`
 
 2. Write your bot:
 
@@ -50,4 +59,4 @@ with Client() as cli:
     asyncio.get_event_loop().run_until_complete(cli.run())
 ```
 
-3. Start your OneBot implementation, then run your bot script.
+3. Start your protocol implementation, then run your bot script.
