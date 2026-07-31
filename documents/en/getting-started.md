@@ -23,6 +23,7 @@ HyperBotCore supports both the OneBot v11 and [Milky](configuration.md) protocol
 - [NapCat](https://github.com/NapNeko/NapCatQQ)
 - [LLOneBot](https://github.com/LLOneBot/LLOneBot)
 - [Lagrange.OneBot](https://github.com/LagrangeDev/Lagrange.Core)
+- [EulerOneBot](https://github.com/HarcicYang/EulerOneBot)
 
 ### Milky Implementations
 

@@ -23,6 +23,7 @@ HypeR Core 支持 OneBot v11 与 [Milky](configuration.md) 两种协议，通过
 - [NapCat](https://github.com/NapNeko/NapCatQQ)
 - [LLOneBot](https://github.com/LLOneBot/LLOneBot)
 - [Lagrange.OneBot](https://github.com/LagrangeDev/Lagrange.Core)
+- [EulerOneBot](https://github.com/HarcicYang/EulerOneBot) ~~小广告（x~~
 
 ### Milky 实现
 
