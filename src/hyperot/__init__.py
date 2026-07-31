@@ -154,6 +154,8 @@ def init(cfg_file: str = "config.json") -> "hyperogger.Logger":
         match config.protocol:
             case "OneBot":
                 adp.load_onebot()
+            case "Milky":
+                adp.load_milky()
             case _:
                 raise NotImplementedError
 

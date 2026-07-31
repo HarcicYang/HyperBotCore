@@ -2,14 +2,18 @@ from hyperot.events import (
     BotOnLineEvent,
     FriendAddEvent,
     FriendAddRequestEvent,
+    FriendFileUploadEvent,
     FriendRecallEvent,
     GroupAddInviteEvent,
     GroupEssenceEvent,
     GroupFileUploadEvent,
+    GroupInvitationEvent,
     GroupMemberDecreaseEvent,
     GroupMessageEvent,
     GroupMuteEvent,
+    GroupNameChangeEvent,
     GroupRecallEvent,
+    GroupWholeMuteEvent,
     MessageReactionEvent,
     NotifyEvent,
     PrivateMessageEvent,
@@ -72,3 +76,32 @@ def test_request_events():
 def test_unrecognized_event():
     ev = em.new({"time": 1, "post_type": "message", "message_type": "unknown", "message": [], "user_id": 3})
     assert isinstance(ev, UnrecognizedEvent)
+
+
+def test_group_whole_mute_event():
+    ev = em.new(_msg("notice", "group_whole_mute", sub_type="mute", operator_id=1))
+    assert isinstance(ev, GroupWholeMuteEvent)
+    assert ev.sub_type == "mute"
+    assert ev.operator_id == 1
+
+
+def test_group_name_change_event():
+    ev = em.new(_msg("notice", "group_name_change", new_group_name="新群名", operator_id=1))
+    assert isinstance(ev, GroupNameChangeEvent)
+    assert ev.new_group_name == "新群名"
+    assert ev.operator_id == 1
+
+
+def test_group_invitation_event():
+    ev = em.new(_msg("notice", "group_invitation", invitation_seq=3, initiator_id=5, source_group_id=6))
+    assert isinstance(ev, GroupInvitationEvent)
+    assert ev.invitation_seq == 3
+    assert ev.initiator_id == 5
+    assert ev.source_group_id == 6
+
+
+def test_friend_file_upload_event():
+    ev = em.new(_msg("notice", "friend_upload", file={"id": "f1", "name": "a.txt", "size": 10}))
+    assert isinstance(ev, FriendFileUploadEvent)
+    assert ev.file is not None
+    assert ev.file["name"] == "a.txt"

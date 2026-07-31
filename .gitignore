@@ -1,5 +1,6 @@
 # 本地配置与脚本
 /config.json
+/milky_config.json
 /logic.py
 /tracer.py
 

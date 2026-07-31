@@ -1,6 +1,6 @@
 from cfgr.manager import BaseConfig
 
-__all__ = ["BotConfig", "BotHTTPC", "BotWSC"]
+__all__ = ["BotConfig", "BotHTTPC", "BotWSC", "MilkyConnection"]
 
 
 class BotWSC(BaseConfig):
@@ -30,12 +30,20 @@ class BotHTTPC(BaseConfig):
     auth: str
 
 
+class MilkyConnection(BaseConfig):
+    mode: str = "Milky"
+    host: str
+    port: int
+    retries: int = 5
+    auth: str = ""
+
+
 class BotConfig(BaseConfig):
     protocol: str = "OneBot"
     owner: list
     black_list: list
     silents: list
-    connection: BotHTTPC | BotWSC | dict
+    connection: BotHTTPC | BotWSC | MilkyConnection | dict
     log_level: str = "INFO"
     log_use_nf: bool = False
     uin: int
@@ -44,11 +52,14 @@ class BotConfig(BaseConfig):
 
     def custom_post(self, **kwargs):
         if isinstance(self.connection, dict):
-            if self.protocol == "OneBot":
-                if self.connection["mode"] == "FWS":
-                    self.connection = BotWSC(**self.connection)
-                elif self.connection["mode"] == "HTTPC":
-                    self.connection = BotHTTPC(**self.connection)
+            match self.protocol:
+                case "OneBot":
+                    if self.connection["mode"] == "FWS":
+                        self.connection = BotWSC(**self.connection)
+                    elif self.connection["mode"] == "HTTPC":
+                        self.connection = BotHTTPC(**self.connection)
+                case "Milky":
+                    self.connection = MilkyConnection(**self.connection)
         else:
             raise TypeError()
 

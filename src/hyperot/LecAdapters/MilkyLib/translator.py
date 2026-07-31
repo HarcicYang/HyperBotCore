@@ -1,12 +1,20 @@
 import json
+from typing import TYPE_CHECKING
 
 from websockets.asyncio.client import connect as wsc
 
 from hyperot.network import WebsocketConnection, httpx_post
 
+from ... import configurator, hyperogger
 from ...adapters.obuilder import OneBotEventBuilder, OneBotJsonMessageBuilder
-from ...common import Message
 from ...utils import errors
+
+if TYPE_CHECKING:
+    from ...common import Message
+
+config = configurator.BotConfig.get("hyper-bot")
+logger = hyperogger.Logger()
+logger.set_level(config.log_level)
 
 
 class MilkyOutGoingSegBuilder:
@@ -94,14 +102,96 @@ def message_translator(milky_message: list[dict], peer_id: int, scene: int = 0) 
             case "forward":
                 builder.forward(forward_id=seg_data["forward_id"])
             case "market_face":
-                raise NotImplementedError  # Impl later
+                builder.mface(
+                    face_id=seg_data.get("emoji_id", ""),
+                    tab_id=str(seg_data.get("emoji_package_id", "")),
+                    key=seg_data.get("key", ""),
+                )
+            case "light_app":
+                builder.json({"app_name": seg_data.get("app_name", ""), "payload": seg_data.get("json_payload", "")})
+            case "xml":
+                builder.json({"service_id": seg_data.get("service_id", 0), "payload": seg_data.get("xml_payload", "")})
+            case "file":
+                logger.debug(f"忽略不支持的文件消息段：{seg_data}")
             case _:
-                raise NotImplementedError  # Maybe never :(
+                logger.debug(f"忽略未知消息段：{seg_type}")
 
     return builder.build()
 
 
-def to_milky_message(message: Message) -> list[dict]:
+def _nodes_to_forward_messages(nodes: list) -> list[dict]:
+    messages = []
+    for node in nodes:
+        node_full = node.to_json() if hasattr(node, "to_json") else node
+        node_data = node_full.get("data", node_full)
+        content = node_data.get("content")
+        if hasattr(content, "get_sync"):
+            node_segs = [_to_milky_seg(s) for s in content.get_sync()]
+        elif isinstance(content, list):
+            node_segs = [_to_milky_seg(s) for s in content]
+        elif isinstance(content, dict):
+            node_segs = [_to_milky_seg(content)]
+        else:
+            node_segs = []
+        messages.append(
+            {
+                "user_id": node_data.get("user_id"),
+                "sender_name": node_data.get("nickname") or node_data.get("nick_name"),
+                "segments": node_segs,
+            }
+        )
+    return messages
+
+
+def node_list_to_milky_forward(message: "Message") -> dict:
+    return {"type": "forward", "data": {"messages": _nodes_to_forward_messages(list(message.contents))}}
+
+
+def _to_milky_seg(seg: dict) -> dict:
+    seg_type = seg["type"]
+    seg_data = seg["data"]
+    match seg_type:
+        case "text":
+            return {"type": "text", "data": {"text": seg_data["text"]}}
+        case "at":
+            if seg_data.get("qq") == "all":
+                return {"type": "mention_all", "data": {}}
+            return {"type": "mention", "data": {"user_id": seg_data.get("qq")}}
+        case "reply":
+            try:
+                seq = msg_deid(int(seg_data["id"]))[1]
+            except (KeyError, TypeError, ValueError):
+                seq = seg_data.get("id")
+            return {"type": "reply", "data": {"seq": seq}}
+        case "face":
+            return {
+                "type": "face",
+                "data": {"face_id": seg_data.get("id"), "is_large": seg_data.get("is_large", False)},
+            }
+        case "image":
+            return {
+                "type": "image",
+                "data": {
+                    "uri": seg_data.get("file"),
+                    "summary": seg_data.get("summary", "[Image]"),
+                    "sub_type": seg_data.get("sub_type", "normal"),
+                },
+            }
+        case "record":
+            return {"type": "record", "data": {"uri": seg_data.get("file")}}
+        case "video":
+            return {"type": "video", "data": {"uri": seg_data.get("file"), "thumb_uri": seg_data.get("thumb_uri")}}
+        case "forward":
+            return {"type": "forward", "data": {"messages": _nodes_to_forward_messages(seg_data.get("content", []))}}
+        case _:
+            return {"type": "text", "data": {"text": ""}}
+
+
+def milky_seg_from_dict(seg: dict) -> dict:
+    return _to_milky_seg(seg.to_json() if hasattr(seg, "to_json") else seg)
+
+
+def to_milky_message(message: "Message") -> list[dict]:
     for i in message.contents:
         if not hasattr(i, "milky_outgoing_seg"):
             raise NotImplementedError(f"Segment {type(i)} not supported in Milky adapter.")
@@ -115,18 +205,17 @@ class MilkyHttpConnection(WebsocketConnection):
         else:
             self.ws = await wsc(self.url + "/event")
 
-    async def recv(self) -> dict:
+    async def recv(self) -> dict | None:
         milky_rp = json.loads(await self.ws.recv())
-        milky_event_type = milky_rp["type"]
+        milky_event_type = milky_rp.get("event_type") or milky_rp.get("type")
         milky_time = milky_rp["time"]
         milky_self_id = milky_rp["self_id"]
         milky_data = milky_rp["data"]
         builder = OneBotEventBuilder()
         match milky_event_type:
-            case "bot_offline":
-                raise errors.BotOfflineError("Bot offline")
             case "message_receive":
-                if milky_data["message_scene"] == "friend":
+                scene = milky_data["message_scene"]
+                if scene == "friend":
                     return (
                         builder.init(milky_time, milky_self_id, milky_data["sender_id"], 0)
                         .as_private_message(
@@ -136,12 +225,12 @@ class MilkyHttpConnection(WebsocketConnection):
                         .private_sender(milky_data["friend"]["nickname"], milky_data["friend"]["sex"], 0)
                         .build()
                     )
-                elif milky_data["message_scene"] == "group":
+                if scene == "group":
                     return (
                         builder.init(milky_time, milky_self_id, milky_data["sender_id"], milky_data["peer_id"])
                         .as_group_message(
                             message_translator(milky_data["segments"], milky_data["peer_id"], 1),
-                            str(msg_enid(0, milky_data["message_seq"], milky_data["sender_id"])),
+                            str(msg_enid(1, milky_data["message_seq"], milky_data["peer_id"])),
                         )
                         .group_sender(
                             milky_data["group_member"]["nickname"],
@@ -155,19 +244,177 @@ class MilkyHttpConnection(WebsocketConnection):
                         )
                         .build()
                     )
-                else:
-                    raise NotImplementedError
+                if scene == "temp":
+                    logger.debug(f"临时会话消息按私聊消息处理：{milky_data}")
+                    return (
+                        builder.init(milky_time, milky_self_id, milky_data["sender_id"], 0)
+                        .as_private_message(
+                            message_translator(milky_data["segments"], milky_data["peer_id"], 0),
+                            str(msg_enid(0, milky_data["message_seq"], milky_data["sender_id"])),
+                        )
+                        .private_sender("", "unknown", 0)
+                        .build()
+                    )
+                logger.debug(f"忽略未知消息场景：{scene}")
+                return None
+            case "bot_offline":
+                return (
+                    builder.init(milky_time, milky_self_id, milky_self_id, 0)
+                    .as_bot_online_event(milky_data.get("reason", "bot offline"))
+                    .build()
+                )
+            case "message_recall":
+                scene = milky_data["message_scene"]
+                if scene == "group":
+                    return (
+                        builder.init(milky_time, milky_self_id, milky_data["sender_id"], milky_data["peer_id"])
+                        .as_group_recall_event(milky_data["operator_id"], str(milky_data["message_seq"]))
+                        .build()
+                    )
+                return (
+                    builder.init(milky_time, milky_self_id, milky_data["sender_id"], 0)
+                    .as_friend_recall_event(milky_data["message_seq"])
+                    .build()
+                )
+            case "group_admin_change":
+                builder.data["sub_type"] = "set" if milky_data["is_set"] else "unset"
+                return (
+                    builder.init(milky_time, milky_self_id, milky_data["user_id"], milky_data["group_id"])
+                    .as_group_admin_event()
+                    .build()
+                )
+            case "group_essence_message_change":
+                builder.data["sub_type"] = "add" if milky_data["is_set"] else "remove"
+                return (
+                    builder.init(milky_time, milky_self_id, 0, milky_data["group_id"])
+                    .as_group_essence_event(0, milky_data["operator_id"], str(milky_data["message_seq"]))
+                    .build()
+                )
+            case "group_member_increase":
+                sub_type = "invite" if milky_data.get("invitor_id") else "approve"
+                operator = milky_data.get("operator_id") or milky_data.get("invitor_id")
+                return (
+                    builder.init(milky_time, milky_self_id, milky_data["user_id"], milky_data["group_id"])
+                    .as_group_increase_event(operator, sub_type)
+                    .build()
+                )
+            case "group_member_decrease":
+                sub_type = "kick" if milky_data.get("operator_id") else "leave"
+                return (
+                    builder.init(milky_time, milky_self_id, milky_data["user_id"], milky_data["group_id"])
+                    .as_group_decrease_event(milky_data.get("operator_id", 0), sub_type)
+                    .build()
+                )
+            case "group_mute":
+                sub_type = "ban" if milky_data["duration"] else "lift_ban"
+                return (
+                    builder.init(milky_time, milky_self_id, milky_data["user_id"], milky_data["group_id"])
+                    .as_group_mute_event(milky_data["operator_id"], milky_data["duration"], sub_type)
+                    .build()
+                )
+            case "group_whole_mute":
+                return (
+                    builder.init(milky_time, milky_self_id, milky_data.get("operator_id", 0), milky_data["group_id"])
+                    .as_group_whole_mute_event(milky_data["is_mute"])
+                    .build()
+                )
+            case "group_name_change":
+                return (
+                    builder.init(milky_time, milky_self_id, milky_data.get("operator_id", 0), milky_data["group_id"])
+                    .as_group_name_change_event(milky_data["new_group_name"], milky_data["operator_id"])
+                    .build()
+                )
+            case "group_invitation":
+                return (
+                    builder.init(milky_time, milky_self_id, milky_data["initiator_id"], milky_data["group_id"])
+                    .as_group_invitation_event(
+                        milky_data["invitation_seq"], milky_data["initiator_id"], milky_data.get("source_group_id")
+                    )
+                    .build()
+                )
+            case "group_file_upload":
+                file = {
+                    "id": milky_data["file_id"],
+                    "name": milky_data["file_name"],
+                    "size": milky_data["file_size"],
+                    "busid": 0,
+                }
+                return (
+                    builder.init(milky_time, milky_self_id, milky_data["user_id"], milky_data["group_id"])
+                    .as_group_file_upload(file)
+                    .build()
+                )
+            case "friend_file_upload":
+                file = {
+                    "id": milky_data["file_id"],
+                    "name": milky_data["file_name"],
+                    "size": milky_data["file_size"],
+                    "busid": 0,
+                    "hash": milky_data.get("file_hash", ""),
+                }
+                return (
+                    builder.init(milky_time, milky_self_id, milky_data["user_id"], 0)
+                    .as_friend_file_upload_event(file)
+                    .build()
+                )
+            case "group_message_reaction":
+                builder.data["sub_type"] = "add" if milky_data["is_add"] else "remove"
+                try:
+                    code = int(milky_data["face_id"])
+                except (TypeError, ValueError):
+                    code = milky_data["face_id"]
+                return (
+                    builder.init(milky_time, milky_self_id, milky_data["user_id"], milky_data["group_id"])
+                    .as_group_reaction_event(str(milky_data["message_seq"]), milky_data["user_id"], code, 0)
+                    .build()
+                )
+            case "friend_nudge":
+                builder.data["target_id"] = milky_self_id
+                return builder.init(milky_time, milky_self_id, milky_data["user_id"], 0).as_poke().build()
+            case "group_nudge":
+                builder.data["target_id"] = milky_data["receiver_id"]
+                return (
+                    builder.init(milky_time, milky_self_id, milky_data["sender_id"], milky_data["group_id"])
+                    .as_poke()
+                    .build()
+                )
+            case "friend_request":
+                return (
+                    builder.init(milky_time, milky_self_id, milky_data["initiator_id"], 0)
+                    .as_friend_add_request(milky_data.get("comment", ""), milky_data["initiator_uid"])
+                    .build()
+                )
+            case "group_join_request":
+                flag = f"{milky_data['group_id']}:{milky_data['notification_seq']}"
+                return (
+                    builder.init(milky_time, milky_self_id, milky_data["initiator_id"], milky_data["group_id"])
+                    .as_group_add_request(milky_data.get("comment", ""), flag, "add")
+                    .build()
+                )
+            case "group_invited_join_request":
+                flag = f"{milky_data['group_id']}:{milky_data['notification_seq']}"
+                return (
+                    builder.init(milky_time, milky_self_id, milky_data["initiator_id"], milky_data["group_id"])
+                    .as_group_add_request("", flag, "invite")
+                    .build()
+                )
             case _:
-                raise NotImplementedError
+                logger.debug(f"忽略未知事件类型：{milky_event_type}")
+                return None
 
     async def http_send(self, endpoint: str, data: dict) -> dict:
         if not data:
             data = {}
+        http_url = self.url.replace("ws://", "http://").replace("wss://", "https://")
         if self.auth:
             response = await httpx_post(
-                f"{self.url}/api/{endpoint}", json=data, headers={"Authorization": f"Bearer {self.auth}"}
+                f"{http_url}/api/{endpoint}", json=data, headers={"Authorization": f"Bearer {self.auth}"}
             )
         else:
-            response = await httpx_post(f"{self.url}/api/{endpoint}", json=data)
-        res = response.json()
-        return res
+            response = await httpx_post(f"{http_url}/api/{endpoint}", json=data)
+        try:
+            return response.json()
+        except json.JSONDecodeError:
+            raise errors.ApiError(
+                f"协议端响应异常 (HTTP {response.status_code}): {response.text[:200] or '空响应体'}"
+            ) from None

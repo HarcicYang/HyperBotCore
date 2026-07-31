@@ -13,18 +13,22 @@ __all__ = [
     "EventManager",
     "FriendAddEvent",
     "FriendAddRequestEvent",
+    "FriendFileUploadEvent",
     "FriendRecallEvent",
     "GroupAddInviteEvent",
     "GroupAdminEvent",
     "GroupAnonymous",
     "GroupEssenceEvent",
     "GroupFileUploadEvent",
+    "GroupInvitationEvent",
     "GroupMemberDecreaseEvent",
     "GroupMemberIncreaseEvent",
     "GroupMessageEvent",
     "GroupMuteEvent",
+    "GroupNameChangeEvent",
     "GroupRecallEvent",
     "GroupSender",
+    "GroupWholeMuteEvent",
     "HyperListenerStartNotify",
     "HyperListenerStopNotify",
     "HyperNotify",
@@ -310,6 +314,58 @@ class GroupMuteEvent(NoticeEvent):
         )
 
 
+@em.reg("notice", "group_whole_mute")
+class GroupWholeMuteEvent(NoticeEvent):
+    sub_type: Literal["mute", "unmute"] | None
+    operator_id: int | None
+
+    def __init__(self, data: dict):
+        super().__init__(data)
+        self.sub_type = data.get("sub_type")
+        self.operator_id = data.get("operator_id")
+
+        self.print_log()
+
+    def print_log(self) -> None:
+        logger.log(
+            f"群 {self.group_id} 被{'开启' if self.sub_type == 'mute' else '取消'}全员禁言，操作者 {self.operator_id}"
+        )
+
+
+@em.reg("notice", "group_name_change")
+class GroupNameChangeEvent(NoticeEvent):
+    new_group_name: str | None
+    operator_id: int | None
+
+    def __init__(self, data: dict):
+        super().__init__(data)
+        self.new_group_name = data.get("new_group_name")
+        self.operator_id = data.get("operator_id")
+
+        self.print_log()
+
+    def print_log(self) -> None:
+        logger.log(f"群 {self.group_id} 名称变更为 {self.new_group_name}，操作者 {self.operator_id}")
+
+
+@em.reg("notice", "group_invitation")
+class GroupInvitationEvent(NoticeEvent):
+    invitation_seq: int | None
+    initiator_id: int | None
+    source_group_id: int | None
+
+    def __init__(self, data: dict):
+        super().__init__(data)
+        self.invitation_seq = data.get("invitation_seq")
+        self.initiator_id = data.get("initiator_id")
+        self.source_group_id = data.get("source_group_id")
+
+        self.print_log()
+
+    def print_log(self) -> None:
+        logger.log(f"邀请者 {self.initiator_id} 邀请本机器人加入群 {self.group_id}")
+
+
 @em.reg("notice", "friend_add")
 class FriendAddEvent(NoticeEvent):
     def __init__(self, data: dict):
@@ -319,6 +375,20 @@ class FriendAddEvent(NoticeEvent):
 
     def print_log(self) -> None:
         logger.log(f"收到 {self.user_id} 的好友请求")
+
+
+@em.reg("notice", "friend_upload")
+class FriendFileUploadEvent(NoticeEvent):
+    file: dict | None
+
+    def __init__(self, data: dict):
+        super().__init__(data)
+        self.file = data.get("file")
+
+        self.print_log()
+
+    def print_log(self) -> None:
+        logger.log(f"{self.user_id} 上传了文件 {self.file}")
 
 
 @em.reg("notice", "group_recall")

@@ -1,7 +1,7 @@
 from abc import ABC
 
 from ...utils.hypetyping import OneBotSegReg
-from .translator import MilkyOutGoingSegBuilder, msg_deid
+from .translator import milky_seg_from_dict
 
 message_types = {}
 
@@ -86,27 +86,7 @@ class SegmentBase(ABC):
         return base
 
     def milky_outgoing_seg(self) -> dict:
-        data = self.to_json()
-        builder = MilkyOutGoingSegBuilder()
-        match data["type"]:
-            case "text":
-                return builder.text(data["data"]["text"]).build()[0]
-            case "image":
-                return builder.image(data["data"]["file"], data["data"].get("summary", "[Image]")).build()[0]
-            case "at":
-                if data["data"].get("user_id") == "all":
-                    return builder.mention_all().build()[0]
-                return builder.mention(data["data"].get("qq")).build()[0]
-            case "reply":
-                return builder.reply(msg_deid(data["data"]["id"])[1]).build()[0]
-            case "face":
-                return builder.face(data["data"]["id"]).build()[0]
-            case "record":
-                return builder.record(data["data"]["file"]).build()[0]
-            case "video":
-                return builder.video(data["data"]["file"]).build()[0]
-            case _:
-                return builder.text("").build()[0]
+        return milky_seg_from_dict(self.to_json())
 
     def __str__(self) -> str:
         return "__not_set__"

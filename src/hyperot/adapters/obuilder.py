@@ -91,13 +91,43 @@ class OneBotEventBuilder:
         self.data["message_id"] = message_id
         return self._as_notice()
 
+    def as_friend_recall_event(self, message_id: int) -> "OneBotEventBuilder":
+        self.data["notice_type"] = "friend_recall"
+        self.data["message_id"] = message_id
+        return self._as_notice()
+
+    def as_group_whole_mute_event(self, is_mute: bool) -> "OneBotEventBuilder":
+        self.data["notice_type"] = "group_whole_mute"
+        self.data["sub_type"] = "mute" if is_mute else "unmute"
+        return self._as_notice()
+
+    def as_group_name_change_event(self, new_group_name: str, operator_id: int) -> "OneBotEventBuilder":
+        self.data["notice_type"] = "group_name_change"
+        self.data["new_group_name"] = new_group_name
+        self.data["operator_id"] = operator_id
+        return self._as_notice()
+
+    def as_group_invitation_event(
+        self, invitation_seq: int, initiator_id: int, source_group_id: int | None = None
+    ) -> "OneBotEventBuilder":
+        self.data["notice_type"] = "group_invitation"
+        self.data["invitation_seq"] = invitation_seq
+        self.data["initiator_id"] = initiator_id
+        self.data["source_group_id"] = source_group_id
+        return self._as_notice()
+
+    def as_friend_file_upload_event(self, file: dict) -> "OneBotEventBuilder":
+        self.data["notice_type"] = "friend_upload"
+        self.data["file"] = file
+        return self._as_notice()
+
     def as_private_recall_event(self, message_id: str) -> "OneBotEventBuilder":
         self.data["notice_type"] = "private_recall"
         self.data["message_id"] = message_id
         return self._as_notice()
 
     def _as_notify(self, notify_type: Literal["poke", "lucky_king", "honor"]) -> "OneBotEventBuilder":
-        self.data["post_type"] = "notify"
+        self.data["notice_type"] = "notify"
         self.data["notify_type"] = notify_type
         return self._as_notice()
 
@@ -132,7 +162,7 @@ class OneBotEventBuilder:
     def as_bot_online_event(self, reason: str) -> "OneBotEventBuilder":
         self.data["notice_type"] = "bot_online"
         self.data["reason"] = reason
-        return self
+        return self._as_notice()
 
     def _as_request(self, comment: str, flag: str) -> "OneBotEventBuilder":
         self.data["post_type"] = "request"
