@@ -1,43 +1,43 @@
-from . import configurator, hyperogger, common
-from .segments import message_types, At
-from .network import WebsocketConnection, HTTPConnection
-from .hyperogger import levels
-
 from abc import ABC
-from typing import Union, Callable, Optional
+from collections.abc import Callable
+
+from . import common, configurator, hyperogger
+from .hyperogger import levels
+from .network import HTTPConnection, WebsocketConnection
+from .segments import At, message_types
 
 __all__ = [
-    "init",
-    "EventManager",
-    "em",
-    "GroupSender",
-    "PrivateSender",
-    "GroupAnonymous",
-    "gen_message",
+    "BotOnLineEvent",
     "Event",
-    "UnrecognizedEvent",
-    "MessageEvent",
-    "PrivateMessageEvent",
-    "GroupMessageEvent",
-    "NoticeEvent",
-    "GroupFileUploadEvent",
+    "EventManager",
+    "FriendAddEvent",
+    "FriendAddRequestEvent",
+    "FriendRecallEvent",
+    "GroupAddInviteEvent",
     "GroupAdminEvent",
+    "GroupAnonymous",
+    "GroupEssenceEvent",
+    "GroupFileUploadEvent",
     "GroupMemberDecreaseEvent",
     "GroupMemberIncreaseEvent",
+    "GroupMessageEvent",
     "GroupMuteEvent",
-    "FriendAddEvent",
     "GroupRecallEvent",
-    "FriendRecallEvent",
-    "NotifyEvent",
-    "GroupEssenceEvent",
-    "MessageReactionEvent",
-    "BotOnLineEvent",
-    "RequestEvent",
-    "FriendAddRequestEvent",
-    "GroupAddInviteEvent",
-    "HyperNotify",
+    "GroupSender",
     "HyperListenerStartNotify",
     "HyperListenerStopNotify",
+    "HyperNotify",
+    "MessageEvent",
+    "MessageReactionEvent",
+    "NoticeEvent",
+    "NotifyEvent",
+    "PrivateMessageEvent",
+    "PrivateSender",
+    "RequestEvent",
+    "UnrecognizedEvent",
+    "em",
+    "gen_message",
+    "init",
 ]
 
 config: configurator.BotConfig
@@ -53,11 +53,7 @@ def init():
 
 class EventManager:
     def __init__(self):
-        self.event_lis = {
-            "message": {},
-            "notice": {},
-            "request": {}
-        }
+        self.event_lis = {"message": {}, "notice": {}, "request": {}}
         self.events = []
 
     def reg(self, type_of: str, str_eql: str) -> Callable:
@@ -138,11 +134,10 @@ class Event(ABC):
         self.group_id = data.get("group_id")
 
         self.is_owner = self.self_id in config.owner
-        self.blocked = True if self.user_id in config.black_list or self.group_id in config.black_list else False
+        self.blocked = self.user_id in config.black_list or self.group_id in config.black_list
         self.is_silent = self.user_id in config.silents or self.group_id in config.silents or 0 in config.silents
 
-    def print_log(self, **kwargs) -> None:
-        ...
+    def print_log(self, **kwargs) -> None: ...
 
 
 class UnrecognizedEvent(Event):
@@ -176,7 +171,7 @@ class GroupMessageEvent(MessageEvent):
         super().__init__(data)
         self.sender = GroupSender(data.get("sender"))  # type: ignore
         self.anonymous = GroupAnonymous(data.get("anonymous"))  # type: ignore
-        self.is_mentioned = True if At(str(self.self_id)) in self.message else False
+        self.is_mentioned = At(str(self.self_id)) in self.message
 
         self.print_log()
 
@@ -212,7 +207,8 @@ class GroupAdminEvent(NoticeEvent):
 
     def print_log(self) -> None:
         logger.log(
-            f"用户 {self.user_id} 在群 {self.group_id} 被{'设置' if self.sub_type == 'set' else '取消'}管理员身份")
+            f"用户 {self.user_id} 在群 {self.group_id} 被{'设置' if self.sub_type == 'set' else '取消'}管理员身份"
+        )
 
 
 @em.reg("notice", "group_decrease")
@@ -253,7 +249,8 @@ class GroupMuteEvent(NoticeEvent):
 
     def print_log(self) -> None:
         logger.log(
-            f"{self.user_id} 在群 {self.group_id} 被{'' if self.sub_type == 'ban' else '解除'}禁言， 时长为{self.duration}")
+            f"{self.user_id} 在群 {self.group_id} 被{'' if self.sub_type == 'ban' else '解除'}禁言， 时长为{self.duration}"
+        )
 
 
 @em.reg("notice", "friend_add")
@@ -315,7 +312,8 @@ class GroupEssenceEvent(NoticeEvent):
     def print_log(self) -> None:
         action = "设置" if self.sub_type == "add" else "移除"
         logger.log(
-            f"{self.operator_id} 在群 {self.group_id} 中将 {self.sender_id} 的消息 {self.message_id} {action}精华")
+            f"{self.operator_id} 在群 {self.group_id} 中将 {self.sender_id} 的消息 {self.message_id} {action}精华"
+        )
 
 
 @em.reg("notice", "reaction")
@@ -368,8 +366,7 @@ class HyperNotify:
 
 
 class HyperListenerStartNotify(HyperNotify):
-    def __init__(self, time_now: int, notify_type: str,
-                 connection: Optional[Union[WebsocketConnection, HTTPConnection]] = None):
+    def __init__(self, time_now: int, notify_type: str, connection: WebsocketConnection | HTTPConnection | None = None):
         super().__init__(time_now, notify_type)
         self.connection = connection
 

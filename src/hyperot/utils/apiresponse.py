@@ -1,36 +1,34 @@
-from abc import ABC, abstractmethod
-from typing import Union, Literal
+from abc import ABC
+from typing import Literal
 
-from ..events import PrivateSender, GroupSender, gen_message
 from ..common import Message
+from ..events import GroupSender, PrivateSender, gen_message
 
 __all__ = [
     "BaseResponse",
-    "MsgSendRsp",
+    "GetGrpInfoRsp",
+    "GetGrpMemInfoRsp",
     "GetLoginInfoRsp",
+    "GetMsgRsp",
+    "GetStrInfoRsp",
     "GetVerInfoRsp",
+    "MsgSendRsp",
     "SendForwardRsp",
     "SendGrpForwardRsp",
-    "GetStrInfoRsp",
-    "GetGrpMemInfoRsp",
-    "GetGrpInfoRsp",
-    "GetMsgRsp",
 ]
 
 
 class BaseResponse(ABC):
-    def __init__(self, json_data: Union[dict, str]):
+    def __init__(self, json_data: dict | str):
         self.raw = json_data
         if json_data:
             # getattr(self, "inner_build")(json_data)
             self.inner_build(json_data)
 
-    def inner_build(self, json_data: Union[dict, str]):
-        ...
+    def inner_build(self, json_data: dict | str): ...
 
     @classmethod
-    def build(cls, *args, **kwargs):
-        ...
+    def build(cls, *args, **kwargs): ...
 
 
 class MsgSendRsp(BaseResponse):
@@ -171,7 +169,7 @@ class GetGrpInfoRsp(BaseResponse):
                 "group_id": group_id,
                 "group_name": group_name,
                 "member_count": member_count,
-                "max_member_count": max_member_count
+                "max_member_count": max_member_count,
             }
         )
 
@@ -181,7 +179,7 @@ class GetMsgRsp(BaseResponse):
     message_type: Literal["private", "group"]
     message_id: int
     real_id: int
-    sender: Union[PrivateSender, GroupSender]
+    sender: PrivateSender | GroupSender
     message: Message
 
     def inner_build(self, json_data: dict):
@@ -189,17 +187,20 @@ class GetMsgRsp(BaseResponse):
         self.message_type = json_data["message_type"]
         self.message_id = json_data["message_id"]
         self.real_id = json_data["real_id"]
-        self.sender = GroupSender(
-            json_data["sender"]
-        ) if self.message_type == "group" else PrivateSender(
-            json_data["sender"]
+        self.sender = (
+            GroupSender(json_data["sender"]) if self.message_type == "group" else PrivateSender(json_data["sender"])
         )
         self.message = gen_message(json_data)
 
     @classmethod
     def build(
-            cls, time: int, message_type: Literal["private", "group"], message_id: int, real_id: int, sender: dict,
-            message: dict
+        cls,
+        time: int,
+        message_type: Literal["private", "group"],
+        message_id: int,
+        real_id: int,
+        sender: dict,
+        message: dict,
     ):
         return cls(
             {
@@ -208,6 +209,6 @@ class GetMsgRsp(BaseResponse):
                 "message_id": message_id,
                 "real_id": real_id,
                 "sender": sender,
-                "message": message
+                "message": message,
             }
         )

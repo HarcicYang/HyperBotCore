@@ -1,9 +1,7 @@
-from typing import Generic, Type, Self, TypeVar
+from typing import Generic, Self, TypeVar
 
-from . import configurator
+from . import configurator, segments
 from .utils.typextensions import ObjectedJson
-from . import segments
-
 
 config = configurator.BotConfig.get("hyper-bot")
 T = TypeVar("T")
@@ -19,12 +17,14 @@ class MessageBuilder:
 
     def __getattr__(self, item):
         if item == "build":
+
             def build() -> Message:
                 return Message(*self.sgs)
 
             return build
 
-        elif item in segments.message_types.keys():
+        elif item in segments.message_types:
+
             def wrapper(*args, **kwargs):
                 self.sgs.append(segments.message_types[item]["type"](*args, **kwargs))
                 return self
@@ -71,8 +71,7 @@ class Message:
         del self.contents[index]
 
     def __iter__(self):
-        for i in self.contents:
-            yield i
+        yield from self.contents
 
     def __str__(self) -> str:
         return "".join([str(content) for content in self.contents])
@@ -90,7 +89,7 @@ class Message:
 
 
 class Ret(Generic[T]):
-    def __init__(self, json_data: dict, serializer: Type[T] = lambda x: x):
+    def __init__(self, json_data: dict, serializer: type[T] = lambda x: x):
         self.raw = json_data.copy()
         self.status = json_data.get("status")
         self.ret_code = json_data.get("retcode")

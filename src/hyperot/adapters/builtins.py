@@ -1,4 +1,4 @@
-from . import replace_res, replace_common, replace_listener
+from . import replace_common, replace_listener, replace_res
 
 
 def load_onebot():

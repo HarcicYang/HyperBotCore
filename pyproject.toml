@@ -25,3 +25,20 @@ dependencies = [
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["hyperot*"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+# 工作区挂载在 NTFS (fuseblk) 上，无法表示可执行位，文件总是 rwxrwxrwx。
+# git index 中已通过 `git update-index --chmod=-x` 修正为 644，此处忽略该检查。
+extend-per-file-ignores = { "*.py" = ["EXE002"] }
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -19,4 +19,3 @@ class KeyQueue:
                 return rs
             except KeyError:
                 await asyncio.sleep(0.01)
-                pass

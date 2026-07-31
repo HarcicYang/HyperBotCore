@@ -2,10 +2,10 @@ import dataclasses
 import json
 import os.path
 import uuid
-from typing import Union, TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any
 
-from .utils.errors import *
 from . import configurator
+from .utils.errors import *
 
 config = configurator.BotConfig.get("hyper-bot")
 
@@ -18,49 +18,49 @@ else:
     Message = Any
 
 __all__ = [
-    "message_types",
-    "MediaSeg",
-    "Text",
-    "StreamTest",
-    "Image",
     "At",
-    "Reply",
-    "Faces",
-    "Record",
-    "Video",
-    "Poke",
     "Contact",
-    "Forward",
-    "Node",
     "CustomNode",
+    "Dice",
+    "Faces",
+    "Forward",
+    "Image",
+    "Json",
+    "KeyBoard",
     "KeyBoardButton",
     "KeyBoardRow",
-    "KeyBoard",
-    "MarkdownContent",
-    "MarkDown",
     "LongMessage",
-    "Json",
+    "MarkDown",
+    "MarkdownContent",
     "MarketFace",
-    "Dice",
-    "Rps",
+    "MediaSeg",
     "Music",
+    "Node",
+    "Poke",
+    "Record",
+    "Reply",
+    "Rps",
+    "StreamTest",
+    "Text",
+    "Video",
+    "message_types",
 ]
 
 
 class MediaSeg(SegmentBase):
     @classmethod
     def build(cls, file: str):
-        if file.startswith("http") or file.startswith("file:") or file.startswith("base64:"):
+        if file.startswith(("http", "file:", "base64:")):
             return cls(file=file)
         else:
             if os.path.isfile(file):
                 if os.path.isabs(file):
                     res = cls()
-                    res.file = f"file://{file}"
+                    res.file = f"file://{file}"  # type: ignore
                     return res
                 else:
                     res = cls()
-                    res.file = f"file://{os.path.abspath(file)}"
+                    res.file = f"file://{os.path.abspath(file)}"  # type: ignore
                     return res
             else:
                 return None
@@ -83,11 +83,11 @@ class StreamTest(SegmentBase, st="stream", su="[Stream] <text>"):
 class Image(MediaSeg, st="image", su="[Image]"):
     file: str
     summary: str = "[Image]"
-    url: str = None
+    url: str | None = None
 
 
 @dataclasses.dataclass
-class At(SegmentBase, st="at", su=f"@<qq>"):
+class At(SegmentBase, st="at", su="@<qq>"):
     qq: str
 
 
@@ -106,16 +106,17 @@ class Faces(SegmentBase, st="face", su="[Face: <id>]"):
 #     lat: str
 #     lon: str
 
+
 @dataclasses.dataclass
 class Record(MediaSeg, st="record", su="[Audio]"):
     file: str
-    url: str = None
+    url: str | None = None
 
 
 @dataclasses.dataclass
 class Video(MediaSeg, st="video", su="[Video]"):
     file: str
-    url: str = None
+    url: str | None = None
 
 
 @dataclasses.dataclass
@@ -137,19 +138,21 @@ class Contact(SegmentBase, st="contact"):
 class Node(SegmentBase, st="node", su="[Node]"):
     user_id: str
     nickname: str
-    content: Union[dict, Message]
+    content: dict | Message
 
 
 class CustomNode:
     def __init__(self, user_id: str, nick_name: str, content):
-        self.content = {"type": "node",
-                        "data": {"user_id": user_id, "nick_name": nick_name, "content": content.get_sync()}}
+        self.content = {
+            "type": "node",
+            "data": {"user_id": user_id, "nick_name": nick_name, "content": content.get_sync()},
+        }
 
     def to_json(self) -> dict:
         return self.content
 
     def __str__(self) -> str:
-        return f"[自定义节点]"
+        return "[自定义节点]"
 
 
 @dataclasses.dataclass
@@ -159,31 +162,26 @@ class Forward(SegmentBase, st="forward", su="[Forward]"):
 
 
 class KeyBoardButton:
-    def __init__(self,
-                 text: str,
-                 style: int = 1,
-                 button_type: int = 2,
-                 data: str = "Hello World",
-                 enter: bool = False,
-                 permission: int = 2,
-                 specify_user_ids=None):
+    def __init__(
+        self,
+        text: str,
+        style: int = 1,
+        button_type: int = 2,
+        data: str = "Hello World",
+        enter: bool = False,
+        permission: int = 2,
+        specify_user_ids=None,
+    ):
         self.content = {
             "id": str(uuid.uuid4()),
-            "render_data": {
-                "label": text,
-                "visited_label": text,
-                "style": style
-            },
+            "render_data": {"label": text, "visited_label": text, "style": style},
             "action": {
                 "type": button_type,
-                "permission": {
-                    "type": permission,
-                    "specify_user_ids": specify_user_ids
-                },
+                "permission": {"type": permission, "specify_user_ids": specify_user_ids},
                 "enter": enter,
                 "unsupport_tips": "Harcic",
-                "data": data
-            }
+                "data": data,
+            },
         }
 
     def get(self) -> dict:
@@ -194,10 +192,8 @@ class KeyBoardButton:
 
 
 class KeyBoardRow:
-    def __init__(self, buttons: Optional[list[KeyBoardButton]] = None):
-        self.content = {
-            "buttons": []
-        }
+    def __init__(self, buttons: list[KeyBoardButton] | None = None):
+        self.content = {"buttons": []}
         buttons = [] if buttons is None else buttons
         for i in buttons:
             self.content["buttons"].append(i.get())
@@ -214,29 +210,29 @@ class KeyBoardRow:
 
 class KeyBoard:
     def __init__(self, button_rows: list[KeyBoardRow]):
-        self.content = {"type": "keyboard",
-                        "data": {"content": {"rows": [i.get() for i in button_rows]}, "bot_appid": 0}}
+        self.content = {
+            "type": "keyboard",
+            "data": {"content": {"rows": [i.get() for i in button_rows]}, "bot_appid": 0},
+        }
 
     def to_json(self) -> dict:
         return self.content
 
     def __str__(self) -> str:
-        return f"[自定按键版]"
+        return "[自定按键版]"
 
 
 class MarkdownContent:
     def __init__(self, raw_content: str):
-        self.content = (
-            raw_content
-            .replace('"', r'\\\"')
-            .replace(r"\`", r"\`")
-        )
+        self.content = raw_content.replace('"', r"\\\"").replace(r"\`", r"\`")
 
 
 class MarkDown:
     def __init__(self, content: MarkdownContent):
-        self.content = {"type": "markdown",
-                        "data": {"content": json.dumps({"content": content.content}).replace('"', '"')}}
+        self.content = {
+            "type": "markdown",
+            "data": {"content": json.dumps({"content": content.content}).replace('"', '"')},
+        }
 
     def set(self, content: MarkdownContent) -> None:
         self.__init__(content)
@@ -245,7 +241,7 @@ class MarkDown:
         return self.content
 
     def __str__(self) -> str:
-        return f"[MarkDown]"
+        return "[MarkDown]"
 
 
 @dataclasses.dataclass
@@ -255,7 +251,7 @@ class LongMessage(SegmentBase, st="longmsg", su="[Long: <id>]"):
 
 @dataclasses.dataclass
 class Json(SegmentBase, st="json", su="[Json]"):
-    data: Union[dict, list, str]
+    data: dict | list | str
 
 
 @dataclasses.dataclass
@@ -278,7 +274,7 @@ class Rps(SegmentBase, st="rps", su="[RPS]"):
 @dataclasses.dataclass
 class Music(SegmentBase, st="music", su="[Music]"):
     type: str
-    url: str = None
-    id: str = None
-    audio: str = None
-    title: str = None
+    url: str | None = None
+    id: str | None = None
+    audio: str | None = None
+    title: str | None = None

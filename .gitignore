@@ -1,4 +1,32 @@
+# 本地配置与脚本
 /config.json
 /logic.py
 /tracer.py
+
+# 锁文件（本项目选择不追踪）
 /uv.lock
+
+# 虚拟环境
+.venv/
+venv/
+
+# 构建产物
+build/
+dist/
+*.egg-info/
+
+# 缓存
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# IDE
+.idea/
+*.iml
+
+# 备份文件
+*.bak

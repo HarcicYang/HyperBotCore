@@ -1,27 +1,30 @@
-import httpx
-import queue
-import flask
-import traceback
 import json
 import logging
+import queue
 import threading
-from websockets.asyncio.client import connect as wsc
+import traceback
+
+import flask
+import httpx
 from websockets.asyncio.client import ClientConnection
-from typing import Optional, Dict
+from websockets.asyncio.client import connect as wsc
 
 
-async def httpx_get(url: str, headers: Optional[Dict] = None) -> httpx.Response:
+async def httpx_get(url: str, headers: dict | None = None) -> httpx.Response:
     async with httpx.AsyncClient(headers=headers) as client:
         return await client.get(url)
 
-async def httpx_post(url: str, json: Optional[dict] = None, data: Optional[str] = None, headers: Optional[Dict] = None) -> httpx.Response:
+
+async def httpx_post(
+    url: str, json: dict | None = None, data: str | None = None, headers: dict | None = None
+) -> httpx.Response:
     async with httpx.AsyncClient(headers=headers) as client:
         return await client.post(url, json=json, data=data)
 
 
 class WebsocketConnection:
     def __init__(self, url: str, auth: str = ""):
-        self.ws: Optional[ClientConnection] = None
+        self.ws: ClientConnection | None = None
         self.url = url
         self.auth = auth
 
@@ -88,7 +91,9 @@ class HTTPConnection:
 
     async def send(self, endpoint: str, data: dict, echo: str) -> None:
         if self.auth:
-            response = await httpx_post(f"{self.url}/{endpoint}", json=data, headers={"Authorization": f"Bearer {self.auth}"})
+            response = await httpx_post(
+                f"{self.url}/{endpoint}", json=data, headers={"Authorization": f"Bearer {self.auth}"}
+            )
         else:
             response = await httpx_post(f"{self.url}/{endpoint}", json=data)
         res = response.json()
@@ -97,8 +102,7 @@ class HTTPConnection:
 
     @staticmethod
     def close() -> None:
-        shutdown_func = flask.request.environ.get('werkzeug.server.shutdown')
+        shutdown_func = flask.request.environ.get("werkzeug.server.shutdown")
         if shutdown_func is None:
-            raise RuntimeError('Not running with the Werkzeug Server')
+            raise RuntimeError("Not running with the Werkzeug Server")
         shutdown_func()
-

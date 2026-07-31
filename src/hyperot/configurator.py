@@ -1,18 +1,13 @@
 from cfgr.manager import BaseConfig
 
-
-__all__ = [
-    "BotConfig",
-    "BotWSC",
-    "BotHTTPC"
-]
+__all__ = ["BotConfig", "BotHTTPC", "BotWSC"]
 
 
 class BotWSC(BaseConfig):
     mode: str = "FWS"
     ob_auto_startup: bool = False
-    ob_exec: str = None
-    ob_startup_path: str = None
+    ob_exec: str | None = None
+    ob_startup_path: str | None = None
     ob_log_output: bool = False
     host: str
     port: int
@@ -24,8 +19,8 @@ class BotWSC(BaseConfig):
 class BotHTTPC(BaseConfig):
     mode: str = "HTTPC"
     ob_auto_startup: bool = False
-    ob_exec: str = None
-    ob_startup_path: str = None
+    ob_exec: str | None = None
+    ob_startup_path: str | None = None
     ob_log_output: bool = False
     host: str
     port: int
@@ -40,9 +35,7 @@ class BotConfig(BaseConfig):
     owner: list
     black_list: list
     silents: list
-    connection: BotHTTPC
-    connection: BotWSC
-    connection: dict
+    connection: BotHTTPC | BotWSC | dict
     log_level: str = "INFO"
     log_use_nf: bool = False
     uin: int

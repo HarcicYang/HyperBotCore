@@ -1,10 +1,10 @@
-from typing import Optional, TypedDict
+from typing import TypedDict
 
 
 class OneBotJsonPacket(TypedDict):
     action: str
     params: dict
-    echo: Optional[str]
+    echo: str | None
 
 
 class OneBotSegReg(TypedDict):

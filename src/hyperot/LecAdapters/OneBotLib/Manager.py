@@ -1,9 +1,8 @@
+import json
+import random
+
 from ... import configurator, hyperogger, network, utils
 from ...utils.hypetyping import OneBotJsonPacket
-
-from typing import Union
-import random
-import json
 
 reports = utils.KeyQueue()
 
@@ -27,7 +26,7 @@ class Packet:
         self.paras = kwargs
         self.echo = f"{endpoint}_{random.randint(1000, 9999)}"
 
-    async def send_to(self, connection: Union[network.WebsocketConnection, network.HTTPConnection]) -> None:
+    async def send_to(self, connection: network.WebsocketConnection | network.HTTPConnection) -> None:
         if isinstance(connection, network.WebsocketConnection):
             payload: OneBotJsonPacket = {
                 "action": self.endpoint,
@@ -39,6 +38,3 @@ class Packet:
         elif isinstance(connection, network.HTTPConnection):
             payload = self.paras
             await connection.send(self.endpoint, payload, self.echo)
-
-
-

@@ -1,17 +1,18 @@
 import datetime
-import typing
-import traceback
 import sys
+import traceback
+import typing
+from typing import ClassVar
 
-from .utils.screens import color_txt, rgb, NerdICONs
 from . import configurator
+from .utils.screens import NerdICONs, color_txt, rgb
 
 __all__ = [
-    "config",
-    "nf_icons",
     "Levels",
-    "levels",
     "Logger",
+    "config",
+    "levels",
+    "nf_icons",
 ]
 
 
@@ -51,7 +52,7 @@ levels = Levels()
 
 
 class Logger:
-    running_loggers = {}
+    running_loggers: ClassVar[dict] = {}
 
     def __init__(self):
         self.log_level = levels.INFO
@@ -105,7 +106,8 @@ class Logger:
     def log(self, message: str, level: str = levels.INFO) -> None:
         if levels.level_nums[level] < levels.level_nums[self.log_level]:
             return
-        time = color_txt(nf_icons.nf_weather_time_4 + " " + str(datetime.datetime.now())[:-4], rgb(65, 128, 176))
+        now = str(datetime.datetime.now().astimezone().replace(tzinfo=None))[:-4]
+        time = color_txt(nf_icons.nf_weather_time_4 + " " + now, rgb(65, 128, 176))
         if "\n" in message:
             listed = message.split("\n")
             for i in listed:
@@ -127,6 +129,9 @@ class Logger:
 
     def error(self, message: str) -> None:
         self.log(message, levels.ERROR)
+
+    def exception(self, message: str) -> None:
+        self.error(f"{message}\n{self.format_exec()}")
 
     def critical(self, message: str) -> None:
         self.log(message, levels.CRITICAL)

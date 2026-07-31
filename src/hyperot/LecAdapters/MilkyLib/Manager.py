@@ -6,8 +6,7 @@ class Packet:
         self.endpoint = endpoint
         self.paras = kwargs
 
-    async  def send_to(self, connection: MilkyHttpConnection) -> dict:
+    async def send_to(self, connection: MilkyHttpConnection) -> dict:
         if isinstance(connection, MilkyHttpConnection):
             return await connection.http_send(self.endpoint, self.paras)
-        else:
-            raise ValueError(f"Invalid connection: {connection}")
+        raise TypeError(f"Invalid connection: {connection}")

@@ -1,16 +1,16 @@
-import json
-import time
 import asyncio
+import json
 import sys
-from typing import Union, Callable
+import time
+from collections.abc import Callable
 
 import websockets
 
-from .. import network, events, common, segments, configurator, hyperogger
+from .. import common, configurator, events, hyperogger, network, segments
+from ..events import *
+from ..LecAdapters.OneBotLib.Manager import Packet, reports
 from ..utils import errors
 from ..utils.apiresponse import *
-from ..LecAdapters.OneBotLib.Manager import reports, Packet
-from ..events import *
 
 config = configurator.BotConfig.get("hyper-bot")
 logger = hyperogger.Logger()
@@ -19,19 +19,16 @@ listener_ran = False
 
 
 class Actions:
-    def __init__(self, cnt: Union[network.WebsocketConnection, network.HTTPConnection]):
+    def __init__(self, cnt: network.WebsocketConnection | network.HTTPConnection):
         self.connection = cnt
 
         class CustomAction:
-            def __init__(self, cnt_i: Union[network.WebsocketConnection, network.HTTPConnection]):
+            def __init__(self, cnt_i: network.WebsocketConnection | network.HTTPConnection):
                 self.connection = cnt_i
 
             def __getattr__(self, item) -> Callable:
                 async def wrapper(**kwargs) -> str:
-                    packet = Packet(
-                        str(item),
-                        **kwargs
-                    )
+                    packet = Packet(str(item), **kwargs)
                     await packet.send_to(self.connection)
                     return packet.echo
 
@@ -40,32 +37,24 @@ class Actions:
         self.custom = CustomAction(self.connection)
 
     async def send_msg(
-            self, message: Union[common.Message, str], group_id: int = 0, user_id: int = 0
+        self, message: common.Message | str, group_id: int = 0, user_id: int = 0
     ) -> common.Ret[MsgSendRsp]:
         if isinstance(message, str):
             message = common.Message(segments.Text(message))
         if group_id:
-            packet = Packet(
-                "send_msg",
-                group_id=group_id,
-                message=await message.get()
-            )
+            packet = Packet("send_msg", group_id=group_id, message=await message.get())
         elif user_id:
-            packet = Packet(
-                "send_msg",
-                user_id=user_id,
-                message=await message.get()
-            )
+            packet = Packet("send_msg", user_id=user_id, message=await message.get())
         else:
             raise errors.ArgsInvalidError("'send' API requires 'group_id' or 'user_id' but none of them are provided.")
         await packet.send_to(self.connection)
-        logger.info(f"向{(('群 ' + str(group_id)) if group_id else ('用户' + str(user_id))) + ' '}发送：{str(message)}")
+        logger.info(f"向{(('群 ' + str(group_id)) if group_id else ('用户' + str(user_id))) + ' '}发送：{message!s}")
         return await common.Ret.fetch(packet.echo, MsgSendRsp)
 
-    async def send_group_msg(self, message: Union[common.Message, str], group_id: int) -> common.Ret[MsgSendRsp]:
+    async def send_group_msg(self, message: common.Message | str, group_id: int) -> common.Ret[MsgSendRsp]:
         return await self.send_msg(message, group_id=group_id)
 
-    async def send_private_msg(self, message: Union[common.Message, str], user_id: int) -> common.Ret[MsgSendRsp]:
+    async def send_private_msg(self, message: common.Message | str, user_id: int) -> common.Ret[MsgSendRsp]:
         return await self.send_msg(message, user_id=user_id)
 
     async def del_msg(self, message_id: int) -> None:
@@ -103,10 +92,7 @@ class Actions:
         return await common.Ret.fetch(packet.echo, GetVerInfoRsp)
 
     async def send_forward_msg(self, message: common.Message) -> common.Ret[SendForwardRsp]:
-        packet = Packet(
-            "send_forward_msg",
-            messages=await message.get()
-        )
+        packet = Packet("send_forward_msg", messages=await message.get())
         await packet.send_to(self.connection)
         return await common.Ret.fetch(packet.echo, SendForwardRsp)
 
@@ -131,23 +117,16 @@ class Actions:
         raise ValueError("Incorrect message type")
 
     async def send_group_forward_msg(self, group_id: int, message: common.Message) -> common.Ret[SendGrpForwardRsp]:
-        packet = Packet(
-            "send_group_forward_msg",
-            group_id=group_id,
-            messages=await message.get()
-        )
+        packet = Packet("send_group_forward_msg", group_id=group_id, messages=await message.get())
         await packet.send_to(self.connection)
         return await common.Ret.fetch(packet.echo, SendForwardRsp)
 
-    async def set_group_add_request(self, flag: str, sub_type: str, approve: bool,
-                                    reason: str = "Not Mentioned") -> None:
-        await Packet(
-            "set_group_add_request",
-            flag=flag,
-            sub_type=sub_type,
-            approve=approve,
-            reason=reason
-        ).send_to(self.connection)
+    async def set_group_add_request(
+        self, flag: str, sub_type: str, approve: bool, reason: str = "Not Mentioned"
+    ) -> None:
+        await Packet("set_group_add_request", flag=flag, sub_type=sub_type, approve=approve, reason=reason).send_to(
+            self.connection
+        )
         logger.info(f"由于 {reason}，{'通过' if approve else '拒绝'} {flag} 请求")
 
     async def get_stranger_info(self, user_id: int) -> common.Ret[GetStrInfoRsp]:
@@ -160,21 +139,12 @@ class Actions:
         return await common.Ret.fetch(packet.echo, GetStrInfoRsp)
 
     async def get_group_member_info(self, group_id: int, user_id: int) -> common.Ret[GetGrpMemInfoRsp]:
-        packet = Packet(
-            "get_group_member_info",
-            group_id=group_id,
-            user_id=user_id,
-            no_cache=True
-        )
+        packet = Packet("get_group_member_info", group_id=group_id, user_id=user_id, no_cache=True)
         await packet.send_to(self.connection)
         return await common.Ret.fetch(packet.echo, GetGrpMemInfoRsp)
 
     async def get_group_info(self, group_id: int) -> common.Ret[GetGrpInfoRsp]:
-        packet = Packet(
-            "get_group_info",
-            group_id=group_id,
-            no_cache=True
-        )
+        packet = Packet("get_group_info", group_id=group_id, no_cache=True)
         await packet.send_to(self.connection)
         return await common.Ret.fetch(packet.echo, GetGrpInfoRsp)
 
@@ -184,10 +154,7 @@ class Actions:
         return await common.Ret.fetch(packet.echo)
 
     async def set_essence_msg(self, message_id: int) -> None:
-        await Packet(
-            "set_essence_msg",
-            message_id=message_id
-        ).send_to(self.connection)
+        await Packet("set_essence_msg", message_id=message_id).send_to(self.connection)
 
     async def set_group_special_title(self, group_id: int, user_id: int, title: str) -> None:
         await Packet(
@@ -198,29 +165,18 @@ class Actions:
         ).send_to(self.connection)
 
     async def get_msg(self, msg_id: int) -> common.Ret[GetMsgRsp]:
-        packet = Packet(
-            "get_msg",
-            message_id=msg_id
-        )
+        packet = Packet("get_msg", message_id=msg_id)
         await packet.send_to(self.connection)
         return await common.Ret.fetch(packet.echo, GetMsgRsp)
 
     async def send_callback(self, group_id: int, bot_id: int, data: dict) -> None:
-        await Packet(
-            "send_group_bot_callback",
-            group_id=group_id,
-            bot_id=bot_id,
-            **data
-        ).send_to(self.connection)
+        await Packet("send_group_bot_callback", group_id=group_id, bot_id=bot_id, **data).send_to(self.connection)
 
 
-async def tester(
-        message_data: Union[Event, HyperNotify], actions: Actions
-) -> None:
-    ...
+async def tester(message_data: Event | HyperNotify, actions: Actions) -> None: ...
 
 
-async def __handler(data: Union[dict, HyperNotify], actions: Actions) -> None:
+async def __handler(data: dict | HyperNotify, actions: Actions) -> None:
     if isinstance(data, dict):
         if data.get("echo") is not None:
             await reports.put(data.get("echo"), data)
@@ -240,7 +196,7 @@ def reg(func: Callable) -> None:
     handler = func
 
 
-connection: Union[network.WebsocketConnection, network.HTTPConnection]
+connection: network.WebsocketConnection | network.HTTPConnection
 
 
 async def run() -> None:
@@ -254,7 +210,7 @@ async def run() -> None:
         elif isinstance(config.connection, configurator.BotHTTPC):
             connection = network.HTTPConnection(
                 url=f"http://{config.connection.host}:{config.connection.port}",
-                listener_url=f"http://{config.connection.listener_host}:{config.connection.listener_port}"
+                listener_url=f"http://{config.connection.listener_host}:{config.connection.listener_port}",
             )
         retried = 0
 
@@ -274,9 +230,7 @@ async def run() -> None:
             logger.info(f"成功在 {connection.url} 建立连接")
             actions = Actions(connection)
             data = HyperListenerStartNotify(
-                time_now=int(time.time()),
-                notify_type="listener_start",
-                connection=connection
+                time_now=int(time.time()), notify_type="listener_start", connection=connection
             )
             # threading.Thread(target=lambda: __handler(data, actions), daemon=True).start()
 
@@ -297,14 +251,14 @@ async def run() -> None:
         logger.warning("正在退出(Ctrl+C)")
         try:
             await connection.close()
-        except:
-            pass
+        except Exception:
+            logger.exception("关闭连接失败")
         sys.exit()
 
 
 def stop() -> None:
     try:
         connection.close()
-    except:
-        pass
+    except Exception:
+        logger.exception("停止监听器时关闭连接失败")
     logger.log("停止运行监听器", level=hyperogger.levels.WARNING)

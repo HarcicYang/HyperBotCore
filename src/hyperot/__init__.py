@@ -1,9 +1,10 @@
-from importlib.metadata import version, PackageNotFoundError
-from typing import Union, Callable, TYPE_CHECKING, Any
 import asyncio
-import sys
 import os
 import signal
+import sys
+from collections.abc import Callable
+from importlib.metadata import PackageNotFoundError, version
+from typing import TYPE_CHECKING, Any
 
 from . import configurator
 from .utils import screens
@@ -21,26 +22,26 @@ screens.play_startup()
 screens.play_info(HYPER_BOT_VERSION)
 
 if TYPE_CHECKING:
-    from . import events, listener, hyperogger
+    from . import events, hyperogger, listener
 
-    ANY_EVENT = Union[
-        events.GroupMessageEvent,
-        events.PrivateMessageEvent,
-        events.GroupFileUploadEvent,
-        events.GroupAdminEvent,
-        events.GroupMemberDecreaseEvent,
-        events.GroupMemberIncreaseEvent,
-        events.GroupMuteEvent,
-        events.FriendAddEvent,
-        events.GroupRecallEvent,
-        events.FriendRecallEvent,
-        events.NotifyEvent,
-        events.GroupEssenceEvent,
-        events.MessageReactionEvent,
-        events.GroupAddInviteEvent,
-        events.HyperListenerStartNotify,
-        events.HyperListenerStopNotify
-    ]
+    ANY_EVENT = (
+        events.GroupMessageEvent
+        | events.PrivateMessageEvent
+        | events.GroupFileUploadEvent
+        | events.GroupAdminEvent
+        | events.GroupMemberDecreaseEvent
+        | events.GroupMemberIncreaseEvent
+        | events.GroupMuteEvent
+        | events.FriendAddEvent
+        | events.GroupRecallEvent
+        | events.FriendRecallEvent
+        | events.NotifyEvent
+        | events.GroupEssenceEvent
+        | events.MessageReactionEvent
+        | events.GroupAddInviteEvent
+        | events.HyperListenerStartNotify
+        | events.HyperListenerStopNotify
+    )
     LISTENER_ACTIONS = listener.Actions
     LOGGER = hyperogger.Logger
 else:
@@ -54,11 +55,7 @@ class Client:
         self.records = {}
         self.lis = None
 
-    def subscribe(
-            self,
-            func: Callable,
-            event: Union[ANY_EVENT, list[ANY_EVENT]]
-    ) -> None:
+    def subscribe(self, func: Callable, event: ANY_EVENT | list[ANY_EVENT]) -> None:
         if isinstance(event, list):
             for e in event:
                 self._subscribe(func, e)
@@ -71,9 +68,7 @@ class Client:
         else:
             self.records[event].append(func)
 
-    async def distributor(
-            self, message_data: Union["events.Event", "events.HyperNotify"], actions: LISTENER_ACTIONS
-    ) -> None:
+    async def distributor(self, message_data: "events.Event | events.HyperNotify", actions: LISTENER_ACTIONS) -> None:
         if type(message_data) in list(self.records.keys()):
             tasks = []
             for i in self.records[type(message_data)]:
@@ -84,6 +79,7 @@ class Client:
 
     async def run(self):
         from . import listener
+
         self.lis = listener
         self.lis.reg(self.distributor)
         if self.records:
@@ -91,6 +87,7 @@ class Client:
             loop = asyncio.get_running_loop()
             _wakeup_task = None
             if sys.platform == "win32":
+
                 def _win32_handler(_signum, _frame):
                     stop.set()
 
@@ -138,12 +135,13 @@ class Client:
 
 def init(cfg_file: str = "config.json") -> "hyperogger.Logger":
     from cfgr.manager import Serializers
+
     try:
         configurator.BotConfig.load_from(cfg_file, Serializers.JSON, "hyper-bot")
     except FileNotFoundError:
         configurator.BotConfig.create_and_write(cfg_file, Serializers.JSON)
         print("没有找到配置文件，已自动创建，请填写后重启")
-        exit(-1)
+        sys.exit(-1)
 
     if True:
         from hyperot import hyperogger

@@ -1,21 +1,22 @@
+import asyncio
 import base64
-import time
 import json
+import time
 import urllib
-from urllib import parse
 
-from ..network import httpx_get, httpx_post
-from ..listener import Actions
 from ..common import Ret
+from ..listener import Actions
+from ..network import httpx_get, httpx_post
+
 
 async def _uid_and_uid_key(uin, pskey):
     url = "https://docs.qq.com/api/user/qq/login"
 
     headers = {
-        'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) QQ/9.9.15-27187 Chrome/126.0.6478.36 Electron/31.0.1 Safari/537.36 OS/win32,x64,10.0.22631,Windows 11 Home China",
-        'Accept': "application/json, text/plain, */*",
-        'referer': "https://docs.qq.com",
-        'Cookie': f"p_uin={uin}; uin={uin}; p_skey={pskey}"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) QQ/9.9.15-27187 Chrome/126.0.6478.36 Electron/31.0.1 Safari/537.36 OS/win32,x64,10.0.22631,Windows 11 Home China",
+        "Accept": "application/json, text/plain, */*",
+        "referer": "https://docs.qq.com",
+        "Cookie": f"p_uin={uin}; uin={uin}; p_skey={pskey}",
     }
 
     response = (await httpx_get(url, headers=headers)).json()
@@ -37,12 +38,8 @@ async def _music_card(uid, uidkey, uin, pskey, data):
 
     ark = {
         "app": "com.tencent.tdoc.qqpush",
-        "config": {
-            "ctime": int(time.time()), "forward": 1, "token": "", "type": "normal"
-        },
-        "extra": {
-            "app_type": 1, "appid": 0, "uin": uin
-        },
+        "config": {"ctime": int(time.time()), "forward": 1, "token": "", "type": "normal"},
+        "extra": {"app_type": 1, "appid": 0, "uin": uin},
         "meta": {
             "music": {
                 "action": "",
@@ -59,10 +56,12 @@ async def _music_card(uid, uidkey, uin, pskey, data):
                 "source_url": "",
                 "tag": tag,
                 "title": title,
-                "uin": uin
+                "uin": uin,
             }
         },
-        "prompt": f"[分享]{title}", "ver": "0.0.0.1", "view": "music"
+        "prompt": f"[分享]{title}",
+        "ver": "0.0.0.1",
+        "view": "music",
     }
     return await _any_card(uid, uidkey, uin, pskey, ark)
 
@@ -70,17 +69,14 @@ async def _music_card(uid, uidkey, uin, pskey, data):
 async def _any_card(uid: str, uidkey: str, uin: int, pskey: str, ark: dict):
     url = "https://docs.qq.com/v2/push/ark_sig"
 
-    payload = {
-        "ark": "",
-        "object_id": "YjONkUwkdtFr"
-    }
+    payload = {"ark": "", "object_id": "YjONkUwkdtFr"}
 
     payload["ark"] = json.dumps(ark)
 
     headers = {
-        'User-Agent': "",
-        'Content-Type': "application/json",
-        'Cookie': f"uid={uid}; uid_key={uidkey}; p_uin={uin}; p_skey={pskey}"
+        "User-Agent": "",
+        "Content-Type": "application/json",
+        "Cookie": f"uid={uid}; uid_key={uidkey}; p_uin={uin}; p_skey={pskey}",
     }
 
     response = await httpx_post(url, json=payload, headers=headers)
@@ -101,16 +97,17 @@ async def get_pic(actions: Actions, uin: int, path: str) -> str:
     skey = "@"
     url = "https://qun.qq.com/cgi-bin/hw/util/image"
 
-    with open(path, "rb") as image_file:
-        base = base64.b64encode(image_file.read()).decode('utf-8')
-    base = urllib.parse.quote(base)
+    def _read_image() -> str:
+        with open(path, "rb") as image_file:
+            return base64.b64encode(image_file.read()).decode("utf-8")
 
+    base = urllib.parse.quote(await asyncio.to_thread(_read_image))
     payload = f"pic={base}&client_type=1&bkn=" + str(gtk(skey))
 
     headers = {
-        'Content-Type': "application/x-www-form-urlencoded",
-        'Referer': "https://qun.qq.com/homework/p/features/index.html",
-        'Cookie': f"p_uin={uin}; p_skey={pskey}; skey={skey}; uin={uin}"
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Referer": "https://qun.qq.com/homework/p/features/index.html",
+        "Cookie": f"p_uin={uin}; p_skey={pskey}; skey={skey}; uin={uin}",
     }
 
     response = (await httpx_post(url, data=payload, headers=headers)).json()
@@ -148,7 +145,7 @@ class Card:
                 "musicUrl": self.music_url,
                 "source_icon": self.source_icon,
                 "tag": self.tag,
-                "preview": self.preview
+                "preview": self.preview,
             }
         else:
             return self.raw

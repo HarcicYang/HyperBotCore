@@ -14,14 +14,13 @@ def color_txt(text: str, color: tuple[int, int, int]) -> str:
 
 start_up = [
     rf"""
-    {color_txt('    _______   ________  ________  ________   _______ ', rgb(114, 220, 230))} {color_txt('     _______  ________  ________', rgb(93, 226, 162))} 
-    {color_txt('  /    /   / V    /   V         V         V/       R ', rgb(114, 220, 230))} {color_txt('  //      / /         V        A', rgb(93, 226, 162))}
-    {color_txt(' /        //         /         /         //        / ', rgb(114, 220, 230))} {color_txt(' //        V         /        _/', rgb(93, 226, 162))}
-    {color_txt('/         /A__      /       __/        _/        _/  ', rgb(114, 220, 230))} {color_txt('/         /         //       /  ', rgb(93, 226, 162))}
-    {color_txt('A___/____/   A_____A ______/ A________ A____/___/    ', rgb(114, 220, 230))} {color_txt('A________/A________/ A______/   ', rgb(93, 226, 162))} 
+    {color_txt("    _______   ________  ________  ________   _______ ", rgb(114, 220, 230))} {color_txt("     _______  ________  ________", rgb(93, 226, 162))} 
+    {color_txt("  /    /   / V    /   V         V         V/       R ", rgb(114, 220, 230))} {color_txt("  //      / /         V        A", rgb(93, 226, 162))}
+    {color_txt(" /        //         /         /         //        / ", rgb(114, 220, 230))} {color_txt(" //        V         /        _/", rgb(93, 226, 162))}
+    {color_txt("/         /A__      /       __/        _/        _/  ", rgb(114, 220, 230))} {color_txt("/         /         //       /  ", rgb(93, 226, 162))}
+    {color_txt("A___/____/   A_____A ______/ A________ A____/___/    ", rgb(114, 220, 230))} {color_txt("A________/A________/ A______/   ", rgb(93, 226, 162))} 
 
     """,
-
     rf"""
     {color_txt("HHH  HHH YYY   YY PPPPPPPp,   ,dEPPPP   ,dbPPPp   dBBPPPo OOOOOOOO TTTTTTTTT ", rgb(100, 184, 236))}
     {color_txt("HHHHHHHH YYYoooYY PPPP   Pp   dEEooo    dRRooP'   BBBoooB OOO  OOO    'TTd   ", rgb(146, 214, 235))}
@@ -29,7 +28,6 @@ start_up = [
     {color_txt("HHP  HHH PPPPPPY  888P      EEbdPPP   RR  do      BBBPPPP OOOooOOO 'TTp      ", rgb(93, 226, 158))}                                              
 
     """,
-
     rf"""
      {color_txt("    dBP dBP dBP dBP dBBBBBb  dBBBP dBBBBBb ", rgb(100, 184, 236))}   {color_txt("   dBBBBb   dBBBBP dBBBBBBP", rgb(93, 226, 163))}
      {color_txt("               dBP      dB'            dBP ", rgb(127, 202, 235))}   {color_txt("      dBP  dBP.BP          ", rgb(146, 214, 235))}
@@ -37,7 +35,7 @@ start_up = [
      {color_txt(" dBP dBP     dBP   dBP    dBP     dBP  BB  ", rgb(127, 202, 235))}   {color_txt(" dB' db  dBP.BP    dBP     ", rgb(93, 226, 158))}
      {color_txt("dBP dBP     dBP   dBP    dBBBBP  dBP  dB'  ", rgb(91, 222, 224))}   {color_txt("dBBBBP' dBBBBP    dBP      ", rgb(93, 226, 163))}
 
-    """
+    """,
 ]
 
 
@@ -67,7 +65,3 @@ class NerdICONs:
     nf_cod_debug_alt = " \ueb91"
     nf_cod_debug_breakpoint_log = " \ueaab"
     nf_weather_time_4 = " \ue385"
-
-
-
-
