@@ -256,10 +256,13 @@ async def tester(message_data: Event | HyperNotify, actions: Actions) -> None: .
 async def __handler(data: dict | HyperNotify | None, actions: Actions) -> None:
     if data is None:
         return
-    if isinstance(data, dict):
-        await handler(events.em.new(data), actions)
-    else:
-        await handler(data, actions)
+    try:
+        if isinstance(data, dict):
+            await handler(events.em.new(data), actions)
+        else:
+            await handler(data, actions)
+    except Exception:
+        logger.exception("处理事件时发生异常")
 
 
 handler: Callable = tester

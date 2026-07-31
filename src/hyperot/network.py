@@ -10,15 +10,19 @@ from websockets.asyncio.client import ClientConnection
 from websockets.asyncio.client import connect as wsc
 
 
-async def httpx_get(url: str, headers: dict | None = None) -> httpx.Response:
-    async with httpx.AsyncClient(headers=headers) as client:
+async def httpx_get(url: str, headers: dict | None = None, timeout: float | None = None) -> httpx.Response:
+    async with httpx.AsyncClient(headers=headers, timeout=timeout) as client:
         return await client.get(url)
 
 
 async def httpx_post(
-    url: str, json: dict | None = None, data: str | None = None, headers: dict | None = None
+    url: str,
+    json: dict | None = None,
+    data: str | None = None,
+    headers: dict | None = None,
+    timeout: float | None = None,
 ) -> httpx.Response:
-    async with httpx.AsyncClient(headers=headers) as client:
+    async with httpx.AsyncClient(headers=headers, timeout=timeout) as client:
         return await client.post(url, json=json, data=data)
 
 

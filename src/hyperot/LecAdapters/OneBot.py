@@ -177,15 +177,18 @@ async def tester(message_data: Event | HyperNotify, actions: Actions) -> None: .
 
 
 async def __handler(data: dict | HyperNotify, actions: Actions) -> None:
-    if isinstance(data, dict):
-        if data.get("echo") is not None:
-            await reports.put(data.get("echo"), data)
-        elif data.get("post_type") == "meta_event" or data.get("user_id") == data.get("self_id"):
-            pass
+    try:
+        if isinstance(data, dict):
+            if data.get("echo") is not None:
+                await reports.put(data.get("echo"), data)
+            elif data.get("post_type") == "meta_event" or data.get("user_id") == data.get("self_id"):
+                pass
+            else:
+                await handler(events.em.new(data), actions)
         else:
-            await handler(events.em.new(data), actions)
-    else:
-        await handler(data, actions)
+            await handler(data, actions)
+    except Exception:
+        logger.exception("处理事件时发生异常")
 
 
 handler: Callable = tester

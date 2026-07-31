@@ -10,7 +10,7 @@ from . import configurator
 from .utils import screens
 
 try:
-    __version__ = version("euler-onebot")
+    __version__ = version("hyper-bot")
 except PackageNotFoundError:
     __version__ = "unknown"
 
