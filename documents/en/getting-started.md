@@ -16,7 +16,7 @@ uv sync
 
 ## Protocol Implementations
 
-HyperBotCore supports both the OneBot v11 and [Milky](milky.md) protocols, switched via the `protocol` field in `config.json`.
+HyperBotCore supports both the OneBot v11 and [Milky](configuration.md) protocols, switched via the `protocol` field in `config.json`.
 
 ### OneBot v11 Implementations
 
@@ -29,7 +29,7 @@ HyperBotCore supports both the OneBot v11 and [Milky](milky.md) protocols, switc
 - [Lagrange.Milky](https://github.com/LagrangeDev/Lagrange.Core)
 - [Yogurt](https://acidify.ntqqrev.org/yogurt/start)
 
-See [Milky Protocol](milky.md) for Milky configuration and usage.
+See [Configuration](configuration.md) for Milky setup and [Events](events.md) for event mapping.
 
 ## Quick Start
 

@@ -60,6 +60,6 @@ Create `config.json` in your bot project root:
 | `connection.retries` | `int` | `5` | Retry count on connect failure |
 | `connection.auth` | `str` | `""` | Protocol implementation `access_token` |
 
-In Milky mode the framework acts as the application side: it connects to `/event` over WebSocket for events and calls `/api/:api` over HTTP. See [Milky Protocol](milky.md).
+In Milky mode the framework acts as the application side: it connects to `/event` over WebSocket for events and calls `/api/:api` over HTTP. Readiness check: `POST /api/get_impl_info` should return `{"status": "ok", ...}`. See [Events](events.md) for event mapping and [Actions](actions.md) for API differences.
 
 The `hyperot.init()` function loads config automatically. If the file doesn't exist, it creates a template and exits.

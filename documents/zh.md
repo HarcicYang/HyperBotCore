@@ -6,7 +6,6 @@ HypeR Core 是一个基于 asyncio 的 QQ 机器人框架，同时适配 OneBot 
 
 - [快速开始](zh/getting-started.md) —— 安装、协议端部署、快速开始
 - [配置文件](zh/configuration.md) —— `config.json` 参考（FWS、HTTPC 与 Milky 模式）
-- [Milky 协议](zh/milky.md) —— Milky 协议配置、事件映射、支持范围
 - [Client 与生命周期](zh/client.md) —— `Client` 类、`subscribe()`、`run()`、`restart()`
 - [事件系统](zh/events.md) —— 全部事件类型及其属性
 - [消息与消息段](zh/messages.md) —— `Message`、消息段类型、构建器、KeyBoard、MarkDown

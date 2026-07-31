@@ -60,7 +60,7 @@ await actions.custom.send_like(user_id=123456, times=10)
 
 ## Milky 协议差异
 
-[Milky 协议](milky.md) 下大部分方法行为一致，差异如下：
+[Milky](configuration.md) 协议下大部分方法行为一致，差异如下：
 
 | 方法 | 差异 |
 |------|------|
@@ -70,6 +70,8 @@ await actions.custom.send_like(user_id=123456, times=10)
 | `get_status` | Milky 无对应 API，返回空 `Ret` |
 | `send_forward_msg` / `send_callback` | 暂不支持，抛出 `NotImplementedError` |
 | `actions.custom` | 直接返回响应 `data` 字典（见上） |
+
+另外，部分协议端（如特定版本 Lagrange.Milky）的私聊撤回 `recall_private_message` 存在协议端侧 bug，私聊撤回可能失败，群撤回不受影响。
 
 ## Ret\<T\>
 

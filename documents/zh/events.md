@@ -60,3 +60,26 @@
 |--------|------|
 | `HyperListenerStartNotify` | 监听器启动，提供 `connection` 引用 |
 | `HyperListenerStopNotify` | 监听器停止 |
+
+## Milky 事件映射
+
+使用 [Milky 协议](../zh/configuration.md) 时，协议端事件统一映射到上述事件模型：
+
+| Milky 事件 | 框架事件 |
+|-----------|---------|
+| `message_receive`（`friend` / `group` / `temp`） | `PrivateMessageEvent` / `GroupMessageEvent`（临时会话按私聊处理） |
+| `bot_offline` | `BotOnLineEvent` |
+| `message_recall` | `FriendRecallEvent` / `GroupRecallEvent` |
+| `group_admin_change` | `GroupAdminEvent` |
+| `group_essence_message_change` | `GroupEssenceEvent` |
+| `group_member_increase` / `group_member_decrease` | `GroupMemberIncreaseEvent` / `GroupMemberDecreaseEvent` |
+| `group_mute` / `group_whole_mute` | `GroupMuteEvent` / `GroupWholeMuteEvent` |
+| `group_name_change` | `GroupNameChangeEvent` |
+| `group_invitation` | `GroupInvitationEvent` |
+| `group_file_upload` / `friend_file_upload` | `GroupFileUploadEvent` / `FriendFileUploadEvent` |
+| `group_message_reaction` | `MessageReactionEvent` |
+| `group_nudge` / `friend_nudge` | `NotifyEvent`（`sub_type = "poke"`） |
+| `friend_request` | `FriendAddRequestEvent`（`flag` 为 `initiator_uid`） |
+| `group_join_request` / `group_invited_join_request` | `GroupAddInviteEvent`（`flag` 编码为 `"{group_id}:{notification_seq}"`） |
+
+其余事件类型（如 `peer_pin_change`）暂无对应事件类，会记录日志并跳过，不影响连接。

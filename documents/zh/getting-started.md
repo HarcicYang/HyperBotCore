@@ -16,7 +16,7 @@ uv sync
 
 ## 协议实现
 
-HypeR Core 支持 OneBot v11 与 [Milky](milky.md) 两种协议，通过 `config.json` 的 `protocol` 字段切换。
+HypeR Core 支持 OneBot v11 与 [Milky](configuration.md) 两种协议，通过 `config.json` 的 `protocol` 字段切换。
 
 ### OneBot v11 实现
 
@@ -29,7 +29,7 @@ HypeR Core 支持 OneBot v11 与 [Milky](milky.md) 两种协议，通过 `config
 - [Lagrange.Milky](https://github.com/LagrangeDev/Lagrange.Core)
 - [Yogurt](https://acidify.ntqqrev.org/yogurt/start)
 
-Milky 模式的配置与使用见 [Milky 协议](milky.md)。
+Milky 模式的配置见[配置文件](configuration.md)，事件映射见[事件系统](events.md)。
 
 ## 快速开始
 

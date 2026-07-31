@@ -60,6 +60,6 @@
 | `connection.retries` | `int` | `5`  | 连接失败重试次数      |
 | `connection.auth`    | `str` | `""` | 协议端 `access_token` |
 
-Milky 模式下框架作为应用端：WebSocket 连接 `/event` 接收事件，HTTP 调用 `/api/:api`。详见 [Milky 协议](milky.md)。
+Milky 模式下框架作为应用端：WebSocket 连接 `/event` 接收事件，HTTP 调用 `/api/:api`。协议端就绪检查：`POST /api/get_impl_info` 应返回 `{"status": "ok", ...}`。事件映射见[事件系统](events.md)，API 差异见 [Actions](actions.md)。
 
 `hyperot.init()` 会自动加载配置。如果文件不存在，会自动创建模板后退出。

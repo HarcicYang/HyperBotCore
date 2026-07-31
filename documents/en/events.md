@@ -58,5 +58,28 @@ Every `Event` instance has:
 
 | Event | Description |
 |--------|-------------|
-| `HyperListenerStartNotify` | Listener started, provides `connection` reference |
+| `HyperListenerStartNotify` | Listener started, provides the `connection` reference |
 | `HyperListenerStopNotify` | Listener stopped |
+
+## Milky Event Mapping
+
+When using the [Milky protocol](../en/configuration.md), protocol events are mapped onto the event model above:
+
+| Milky event | Framework event |
+|-------------|-----------------|
+| `message_receive` (`friend` / `group` / `temp`) | `PrivateMessageEvent` / `GroupMessageEvent` (temp sessions are treated as private) |
+| `bot_offline` | `BotOnLineEvent` |
+| `message_recall` | `FriendRecallEvent` / `GroupRecallEvent` |
+| `group_admin_change` | `GroupAdminEvent` |
+| `group_essence_message_change` | `GroupEssenceEvent` |
+| `group_member_increase` / `group_member_decrease` | `GroupMemberIncreaseEvent` / `GroupMemberDecreaseEvent` |
+| `group_mute` / `group_whole_mute` | `GroupMuteEvent` / `GroupWholeMuteEvent` |
+| `group_name_change` | `GroupNameChangeEvent` |
+| `group_invitation` | `GroupInvitationEvent` |
+| `group_file_upload` / `friend_file_upload` | `GroupFileUploadEvent` / `FriendFileUploadEvent` |
+| `group_message_reaction` | `MessageReactionEvent` |
+| `group_nudge` / `friend_nudge` | `NotifyEvent` (`sub_type = "poke"`) |
+| `friend_request` | `FriendAddRequestEvent` (`flag` is `initiator_uid`) |
+| `group_join_request` / `group_invited_join_request` | `GroupAddInviteEvent` (`flag` encoded as `"{group_id}:{notification_seq}"`) |
+
+Other event types (e.g. `peer_pin_change`) have no corresponding event class yet; they are logged and skipped without breaking the connection.

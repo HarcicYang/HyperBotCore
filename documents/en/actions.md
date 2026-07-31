@@ -60,7 +60,7 @@ The method name becomes the OneBot `action` field, and keyword arguments become 
 
 ## Milky Protocol Differences
 
-Under the [Milky protocol](milky.md), most methods behave the same, with these differences:
+Under the [Milky protocol](configuration.md), most methods behave the same, with these differences:
 
 | Method | Difference |
 |--------|------------|
@@ -70,6 +70,8 @@ Under the [Milky protocol](milky.md), most methods behave the same, with these d
 | `get_status` | No Milky counterpart; returns an empty `Ret` |
 | `send_forward_msg` / `send_callback` | Not supported yet; raise `NotImplementedError` |
 | `actions.custom` | Returns the response `data` dict directly (see above) |
+
+Also, some protocol implementations (e.g. certain Lagrange.Milky builds) have a protocol-side bug in `recall_private_message`; private recall may fail, group recall is unaffected.
 
 ## Ret\<T\>
 
