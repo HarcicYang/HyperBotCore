@@ -28,7 +28,7 @@ async def handler_msg(event: MessageEvent, actions: listener.Actions):
                 At(qq=str(event.user_id)),
                 Text(f" Hello from HypeR Core {hyperot.HYPER_BOT_VERSION}"),
                 Image(file=f"file://{os.path.abspath('./ban.png')}"),
-                Text(f"Current OenBot {info.data.protocol_version} Impl: {info.data.app_name} {info.data.app_version}"),
+                Text(f"Current Milky {info.data.protocol_version} Impl: {info.data.app_name} {info.data.app_version}"),
             ),
             group_id=event.group_id,
             user_id=event.user_id,
