@@ -31,3 +31,4 @@ htmlcov/
 
 # 备份文件
 *.bak
+.zed/
