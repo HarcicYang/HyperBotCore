@@ -13,8 +13,8 @@ urls = { repository = "https://github.com/HarcicYang/HypeR_Bot" }
 requires-python = ">=3.11"
 dependencies = [
     "setuptools",
-    "httpx~=0.26.0",
-    "websockets",
+    "httpx~=0.28.1",
+    "websockets~=17.0.1",
     "fastapi",
     "uvicorn",
     "ucfgr>=0.0.5",
