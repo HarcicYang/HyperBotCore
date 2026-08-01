@@ -10,7 +10,7 @@ authors = [
     { name = "Harcic", email = "harcic@outlook.com" },
 ]
 urls = { repository = "https://github.com/HarcicYang/HypeR_Bot" }
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "setuptools",
     "httpx~=0.26.0",

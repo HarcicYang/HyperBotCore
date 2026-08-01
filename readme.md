@@ -21,6 +21,8 @@ HypeR Core 是一个基于 Python asyncio 的 QQ 机器人框架，提供简洁�
 
 ## 安装
 
+需要 Python 3.11+。
+
 ```shell
 pip install hyper-bot
 ```
