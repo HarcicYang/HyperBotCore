@@ -12,7 +12,7 @@ cli = Client()
 cli.subscribe(handler, GroupMessageEvent)  # Single event type
 cli.subscribe(handler, [GroupMessageEvent, PrivateMessageEvent])  # Multiple
 asyncio.get_event_loop().run_until_complete(cli.run())  # Start (blocking)
-cli.restart()  # Restart process
+await cli.restart()  # Restart process
 ```
 
 ## Context Manager
@@ -48,4 +48,8 @@ Starts the listener and blocks until interrupted (SIGINT/SIGTERM on Linux, SIGIN
 
 ## restart()
 
-Stops the listener, then re-executes the current process via `os.execv`.
+Stops the listener, then re-executes the current process via `os.execv`. This is an async method — call it within an event loop:
+
+```python
+await cli.restart()
+```

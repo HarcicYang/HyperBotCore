@@ -1,6 +1,8 @@
 from abc import ABC
 from typing import Literal
 
+from typing_extensions import override
+
 from ..common import Message
 from ..events import GroupSender, PrivateSender, gen_message
 
@@ -22,18 +24,16 @@ class BaseResponse(ABC):
     def __init__(self, json_data: dict | str):
         self.raw = json_data
         if json_data:
-            # getattr(self, "inner_build")(json_data)
+            assert isinstance(json_data, dict)
             self.inner_build(json_data)
 
-    def inner_build(self, json_data: dict | str): ...
-
-    @classmethod
-    def build(cls, *args, **kwargs): ...
+    def inner_build(self, json_data: dict) -> None: ...
 
 
 class MsgSendRsp(BaseResponse):
     message_id: int
 
+    @override
     def inner_build(self, json_data: dict):
         self.message_id = json_data["message_id"]
 
@@ -46,6 +46,7 @@ class GetLoginInfoRsp(BaseResponse):
     user_id: int
     nickname: str
 
+    @override
     def inner_build(self, json_data: dict):
         self.user_id = json_data["user_id"]
         self.nickname = json_data["nickname"]
@@ -60,6 +61,7 @@ class GetVerInfoRsp(BaseResponse):
     app_version: str
     protocol_version: str
 
+    @override
     def inner_build(self, json_data: dict):
         self.app_name = json_data["app_name"]
         self.app_version = json_data["app_version"]
@@ -73,18 +75,29 @@ class GetVerInfoRsp(BaseResponse):
 class SendForwardRsp(BaseResponse):
     res_id: str
 
-    def inner_build(self, json_data: str):
-        self.res_id = str(json_data)
+    @override
+    def __init__(self, json_data: dict | str):
+        self.raw = json_data
+        if json_data:
+            self.inner_build(json_data)
+
+    @override
+    def inner_build(self, json_data: dict | str):
+        if isinstance(json_data, dict):
+            self.res_id = str(json_data["res_id"])
+        else:
+            self.res_id = json_data
 
     @classmethod
     def build(cls, res_id: str):
-        return cls(res_id)
+        return cls({"res_id": res_id})
 
 
 class SendGrpForwardRsp(BaseResponse):
     message_id: int
     forward_id: str
 
+    @override
     def inner_build(self, json_data: dict):
         self.message_id = json_data["message_id"]
         self.forward_id = json_data["forward_id"]
@@ -100,6 +113,7 @@ class GetStrInfoRsp(BaseResponse):
     sex: str
     age: int
 
+    @override
     def inner_build(self, json_data: dict):
         self.user_id = json_data["user_id"]
         self.nickname = json_data["nickname"]
@@ -128,6 +142,7 @@ class GetGrpMemInfoRsp(BaseResponse):
     title_expire_time: int
     card_changeable: bool
 
+    @override
     def inner_build(self, json_data: dict):
         self.group_id = json_data["group_id"]
         self.user_id = json_data["user_id"]
@@ -156,6 +171,7 @@ class GetGrpInfoRsp(BaseResponse):
     member_count: int
     max_member_count: int
 
+    @override
     def inner_build(self, json_data: dict):
         self.group_id = json_data["group_id"]
         self.group_name = json_data["group_name"]
@@ -182,6 +198,7 @@ class GetMsgRsp(BaseResponse):
     sender: PrivateSender | GroupSender
     message: Message
 
+    @override
     def inner_build(self, json_data: dict):
         self.time = json_data["time"]
         self.message_type = json_data["message_type"]

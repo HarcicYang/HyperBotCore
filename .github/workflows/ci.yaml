@@ -29,5 +29,8 @@ jobs:
       - name: Ruff format check
         run: uv run ruff format --check src tests
 
+      - name: Pyrefly
+        run: uv run pyrefly check
+
       - name: Pytest
         run: uv run pytest

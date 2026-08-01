@@ -1,4 +1,5 @@
 from abc import ABC
+from typing import cast
 
 from ...utils.hypetyping import OneBotSegReg
 from .translator import milky_seg_from_dict
@@ -56,7 +57,7 @@ class SegmentBase(ABC):
                 return text
 
             for i in cls.__anns:
-                if f"<{i}>" in summary_tmp:
+                if f"<{i}>" in text:
                     try:
                         v = self.__getattribute__(i)
                     except AttributeError:
@@ -67,10 +68,13 @@ class SegmentBase(ABC):
 
         cls.__str__ = to_str if cls().__str__() == "__not_set__" else cls.__str__
 
-        message_types[sg_type]: OneBotSegReg = {
-            "type": cls,
-            "args": list(cls.__anns.keys()),
-        }
+        message_types[sg_type] = cast(
+            OneBotSegReg,
+            {
+                "type": cls,
+                "args": list(cls.__anns.keys()),
+            },
+        )
 
         return cls
 

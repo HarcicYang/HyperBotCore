@@ -23,7 +23,7 @@ async def httpx_post(
     timeout: float | None = None,
 ) -> httpx.Response:
     async with httpx.AsyncClient(headers=headers, timeout=timeout) as client:
-        return await client.post(url, json=json, data=data)
+        return await client.post(url, json=json, data=data)  # pyrefly: ignore[bad-argument-type]
 
 
 class WebsocketConnection:
@@ -48,7 +48,7 @@ class WebsocketConnection:
             raise RuntimeError("没有建立连接")
         await self.ws.close()
 
-    async def recv(self) -> dict:
+    async def recv(self) -> dict | None:
         if self.ws is None:
             raise RuntimeError("没有建立连接")
         return json.loads(await self.ws.recv())
@@ -104,8 +104,7 @@ class HTTPConnection:
         res["echo"] = echo
         self.reports.put(res)
 
-    @staticmethod
-    def close() -> None:
+    async def close(self) -> None:
         shutdown_func = flask.request.environ.get("werkzeug.server.shutdown")
         if shutdown_func is None:
             raise RuntimeError("Not running with the Werkzeug Server")

@@ -36,5 +36,4 @@ class Packet:
             await connection.send(json.dumps(payload))
 
         elif isinstance(connection, network.HTTPConnection):
-            payload = self.paras
-            await connection.send(self.endpoint, payload, self.echo)
+            await connection.send(self.endpoint, self.paras, self.echo)

@@ -176,7 +176,7 @@ class Actions:
 async def tester(message_data: Event | HyperNotify, actions: Actions) -> None: ...
 
 
-async def __handler(data: dict | HyperNotify, actions: Actions) -> None:
+async def __handler(data: dict | HyperNotify | None, actions: Actions) -> None:
     try:
         if isinstance(data, dict):
             if data.get("echo") is not None:
@@ -208,24 +208,27 @@ async def run() -> None:
     try:
         if handler is tester:
             raise errors.ListenerNotRegisteredError("No handler registered")
-        if isinstance(config.connection, configurator.BotWSC):
-            connection = network.WebsocketConnection(f"ws://{config.connection.host}:{config.connection.port}/")
-        elif isinstance(config.connection, configurator.BotHTTPC):
+        connection_cfg = config.connection
+        if isinstance(connection_cfg, configurator.BotWSC):
+            connection = network.WebsocketConnection(f"ws://{connection_cfg.host}:{connection_cfg.port}/")
+        elif isinstance(connection_cfg, configurator.BotHTTPC):
             connection = network.HTTPConnection(
-                url=f"http://{config.connection.host}:{config.connection.port}",
-                listener_url=f"http://{config.connection.listener_host}:{config.connection.listener_port}",
+                url=f"http://{connection_cfg.host}:{connection_cfg.port}",
+                listener_url=f"http://{connection_cfg.listener_host}:{connection_cfg.listener_port}",
             )
+        else:
+            raise TypeError("OneBot 协议需要 BotWSC 或 BotHTTPC 类型的连接配置")
         retried = 0
 
-        while 1:
+        while True:
             try:
                 await connection.connect()
             except (ConnectionRefusedError, TimeoutError):
-                if retried >= config.connection.retries:
-                    logger.critical(f"重试次数达到最大值({config.connection.retries})，退出")
+                if retried >= connection_cfg.retries:
+                    logger.critical(f"重试次数达到最大值({connection_cfg.retries})，退出")
                     break
 
-                logger.warning(f"连接建立失败，3秒后重试({retried}/{config.connection.retries})")
+                logger.warning(f"连接建立失败，3秒后重试({retried}/{connection_cfg.retries})")
                 retried += 1
                 await asyncio.sleep(3)
                 continue
@@ -259,9 +262,9 @@ async def run() -> None:
         sys.exit()
 
 
-def stop() -> None:
+async def stop() -> None:
     try:
-        connection.close()
+        await connection.close()
     except Exception:
         logger.exception("停止监听器时关闭连接失败")
     logger.log("停止运行监听器", level=hyperogger.levels.WARNING)

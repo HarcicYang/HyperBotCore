@@ -78,8 +78,10 @@ class Logger:
         return self
 
     @staticmethod
-    def format_exec():
+    def format_exec() -> str:
         exc_type, exc_value, exc_traceback = sys.exc_info()
+        if exc_traceback is None:
+            return ""
         formatted = color_txt("\nHypeR Bot Exception traceback: \n\n", rgb(255, 47, 47))
         tb_frames = traceback.extract_tb(exc_traceback)
         FILE = color_txt("File", rgb(85, 173, 238))
@@ -92,8 +94,8 @@ class Logger:
                 f" in {color_txt(func_name, rgb(70, 172, 107))}\n"
                 f"      {color_txt(code, rgb(255, 255, 255))}\n\n"
             )
-        formatted += f"{color_txt(exc_type.__name__, rgb(255, 47, 47))}: "
-        formatted += color_txt(exc_value, rgb(255, 255, 255)) + "\n"
+        formatted += f"{color_txt(exc_type.__name__ if exc_type is not None else 'Unknown', rgb(255, 47, 47))}: "
+        formatted += color_txt(str(exc_value), rgb(255, 255, 255)) + "\n"
 
         return formatted
 

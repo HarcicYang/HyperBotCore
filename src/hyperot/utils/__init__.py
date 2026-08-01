@@ -12,7 +12,7 @@ class KeyQueue:
         self.contents[key] = obj
 
     async def get(self, key: str) -> Any:
-        while 1:
+        while True:
             try:
                 rs = self.contents[key]
                 del self.contents[key]

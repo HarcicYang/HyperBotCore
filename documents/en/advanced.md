@@ -50,7 +50,7 @@ node = CustomNode(
 ## Process Restart
 
 ```python
-cli.restart()  # Stops the listener and re-execs the process
+await cli.restart()  # Stops the listener and re-execs the process
 ```
 
 Handy for hot-reload scenarios. Note: `os.execv` replaces the current process entirely.

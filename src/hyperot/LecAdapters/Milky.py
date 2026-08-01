@@ -3,7 +3,6 @@ import json
 import sys
 import time
 from collections.abc import Callable
-from typing import NoReturn
 
 from .. import common, configurator, events, hyperogger, segments
 from ..events import *
@@ -276,7 +275,7 @@ def reg(func: Callable) -> None:
 connection: MilkyHttpConnection
 
 
-async def run() -> NoReturn:
+async def run() -> None:
     global connection, listener_ran
     listener_ran = True
     try:
@@ -328,9 +327,9 @@ async def run() -> NoReturn:
         sys.exit()
 
 
-def stop() -> None:
+async def stop() -> None:
     try:
-        connection.close()
+        await connection.close()
     except Exception:
         logger.exception("停止监听器时关闭连接失败")
     logger.log("停止运行监听器", level=hyperogger.levels.WARNING)

@@ -2,6 +2,8 @@ from abc import ABC
 from collections.abc import Callable
 from typing import Literal, cast
 
+from typing_extensions import override
+
 from . import common, configurator, hyperogger
 from .hyperogger import levels
 from .network import HTTPConnection, WebsocketConnection
@@ -202,6 +204,7 @@ class PrivateMessageEvent(MessageEvent):
 
         self.print_log()
 
+    @override
     def print_log(self) -> None:
         logger.log(f"收到 {self.user_id} 的消息：{self.message}")
 
@@ -220,6 +223,7 @@ class GroupMessageEvent(MessageEvent):
 
         self.print_log()
 
+    @override
     def print_log(self) -> None:
         logger.log(f"收到来自群 {self.group_id} 中 {self.user_id} 的消息： {self.message}")
 
@@ -242,6 +246,7 @@ class GroupFileUploadEvent(NoticeEvent):
 
         self.print_log()
 
+    @override
     def print_log(self) -> None:
         logger.log(f"{self.user_id} 在 {self.group_id} 上传了文件 {self.file}")
 
@@ -256,6 +261,7 @@ class GroupAdminEvent(NoticeEvent):
 
         self.print_log()
 
+    @override
     def print_log(self) -> None:
         logger.log(
             f"用户 {self.user_id} 在群 {self.group_id} 被{'设置' if self.sub_type == 'set' else '取消'}管理员身份"
@@ -274,6 +280,7 @@ class GroupMemberDecreaseEvent(NoticeEvent):
 
         self.print_log()
 
+    @override
     def print_log(self) -> None:
         logger.log(f"{self.user_id} 离开群 {self.group_id}， [{self.sub_type}, {self.operator_id}]")
 
@@ -290,6 +297,7 @@ class GroupMemberIncreaseEvent(NoticeEvent):
 
         self.print_log()
 
+    @override
     def print_log(self) -> None:
         logger.log(f"{self.user_id} 加入群 {self.group_id}， [{self.sub_type}, {self.operator_id}]")
 
@@ -308,6 +316,7 @@ class GroupMuteEvent(NoticeEvent):
 
         self.print_log()
 
+    @override
     def print_log(self) -> None:
         logger.log(
             f"{self.user_id} 在群 {self.group_id} 被{'' if self.sub_type == 'ban' else '解除'}禁言， 时长为{self.duration}"
@@ -326,6 +335,7 @@ class GroupWholeMuteEvent(NoticeEvent):
 
         self.print_log()
 
+    @override
     def print_log(self) -> None:
         logger.log(
             f"群 {self.group_id} 被{'开启' if self.sub_type == 'mute' else '取消'}全员禁言，操作者 {self.operator_id}"
@@ -344,6 +354,7 @@ class GroupNameChangeEvent(NoticeEvent):
 
         self.print_log()
 
+    @override
     def print_log(self) -> None:
         logger.log(f"群 {self.group_id} 名称变更为 {self.new_group_name}，操作者 {self.operator_id}")
 
@@ -362,6 +373,7 @@ class GroupInvitationEvent(NoticeEvent):
 
         self.print_log()
 
+    @override
     def print_log(self) -> None:
         logger.log(f"邀请者 {self.initiator_id} 邀请本机器人加入群 {self.group_id}")
 
@@ -373,6 +385,7 @@ class FriendAddEvent(NoticeEvent):
 
         self.print_log()
 
+    @override
     def print_log(self) -> None:
         logger.log(f"收到 {self.user_id} 的好友请求")
 
@@ -387,6 +400,7 @@ class FriendFileUploadEvent(NoticeEvent):
 
         self.print_log()
 
+    @override
     def print_log(self) -> None:
         logger.log(f"{self.user_id} 上传了文件 {self.file}")
 
@@ -403,6 +417,7 @@ class GroupRecallEvent(NoticeEvent):
 
         self.print_log()
 
+    @override
     def print_log(self) -> None:
         logger.log(f"{self.operator_id} 在群 {self.group_id} 中撤回了 {self.user_id} 的消息 {self.message_id}")
 
@@ -417,6 +432,7 @@ class FriendRecallEvent(NoticeEvent):
 
         self.print_log()
 
+    @override
     def print_log(self) -> None:
         logger.log(f"{self.user_id} 撤回了一条消息")
 
@@ -450,6 +466,7 @@ class GroupEssenceEvent(NoticeEvent):
 
         self.print_log()
 
+    @override
     def print_log(self) -> None:
         action = "设置" if self.sub_type == "add" else "移除"
         logger.log(
@@ -484,6 +501,7 @@ class BotOnLineEvent(NoticeEvent):
 
         self.print_log()
 
+    @override
     def print_log(self) -> None:
         logger.info(f"由于 {self.reason} ，OneBot 实现与 QQ 重新连接")
 

@@ -1,4 +1,5 @@
-from typing import Generic, Self, TypeVar
+from collections.abc import Callable
+from typing import Any, Generic, Self, TypeVar
 
 from . import configurator, segments
 from .utils.typextensions import ObjectedJson
@@ -89,7 +90,7 @@ class Message:
 
 
 class Ret(Generic[T]):
-    def __init__(self, json_data: dict, serializer: type[T] = lambda x: x):
+    def __init__(self, json_data: dict, serializer: Callable[[Any], T] = lambda x: x):  # type: ignore[misc]
         self.raw = json_data.copy()
         self.status = json_data.get("status")
         self.ret_code = json_data.get("retcode")

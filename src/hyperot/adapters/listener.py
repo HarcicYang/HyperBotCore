@@ -1,5 +1,4 @@
 from collections.abc import Callable
-from typing import NoReturn
 
 from .. import common, configurator, hyperogger
 from ..utils.apiresponse import *
@@ -68,8 +67,8 @@ class Actions:
 def reg(func: Callable) -> None: ...
 
 
-async def run() -> NoReturn:
+async def run() -> None:
     logger.error("你没有设置适配器！")
 
 
-def stop() -> None: ...
+async def stop() -> None: ...

@@ -12,7 +12,7 @@ cli = Client()
 cli.subscribe(handler, GroupMessageEvent)  # 订阅单个事件类型
 cli.subscribe(handler, [GroupMessageEvent, PrivateMessageEvent])  # 订阅多个
 asyncio.get_event_loop().run_until_complete(cli.run())  # 启动（阻塞）
-cli.restart()  # 重启进程
+await cli.restart()  # 重启进程
 ```
 
 ## 上下文管理器
@@ -48,4 +48,8 @@ def subscribe(func: Callable, event: type | list[type]) -> None
 
 ## restart()
 
-停止监听器，然后通过 `os.execv` 重启当前进程。
+停止监听器，然后通过 `os.execv` 重启当前进程。这是异步方法，需在事件循环中调用：
+
+```python
+await cli.restart()
+```

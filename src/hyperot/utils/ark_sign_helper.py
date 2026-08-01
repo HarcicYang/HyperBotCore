@@ -2,7 +2,7 @@ import asyncio
 import base64
 import json
 import time
-import urllib
+import urllib.parse
 
 from ..common import Ret
 from ..listener import Actions
@@ -93,7 +93,7 @@ def gtk(skey):
 
 async def get_pic(actions: Actions, uin: int, path: str) -> str:
     echo = await actions.custom.get_cookies(domain="qun.qq.com")
-    pskey = Ret.fetch(echo).data.cookies
+    pskey = (await Ret.fetch(echo)).data.cookies
     skey = "@"
     url = "https://qun.qq.com/cgi-bin/hw/util/image"
 
@@ -152,7 +152,7 @@ class Card:
 
     async def get_sig(self, actions: Actions, uin: int) -> str:
         echo = await actions.custom.get_cookies(domain="docs.qq.com")
-        p_skey = Ret.fetch(echo).data.cookies
+        p_skey = (await Ret.fetch(echo)).data.cookies
         data = await _uid_and_uid_key(uin, p_skey)
         if self.is_m:
             return (

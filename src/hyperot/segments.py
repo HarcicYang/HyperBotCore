@@ -4,6 +4,8 @@ import os.path
 import uuid
 from typing import TYPE_CHECKING, Any
 
+from typing_extensions import override
+
 from . import configurator
 from .utils.errors import *
 
@@ -12,7 +14,7 @@ config = configurator.BotConfig.get("hyper-bot")
 from .adapters.res import SegmentBase, message_types
 
 if TYPE_CHECKING:
-    from common import Message
+    from .common import Message
 
 else:
     Message = Any
@@ -130,6 +132,7 @@ class Contact(SegmentBase, st="contact"):
     type: str
     id: str
 
+    @override
     def __str__(self) -> str:
         return f"[推荐{'群' if self.type == 'group' else '用户'}: {self.id}]"
 

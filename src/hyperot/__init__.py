@@ -98,7 +98,7 @@ class Client:
                     pass
 
                 async def _win32_wakeup():
-                    while 1:
+                    while True:
                         await asyncio.sleep(0.1)
 
                 _wakeup_task = asyncio.create_task(_win32_wakeup())
@@ -115,8 +115,9 @@ class Client:
             except asyncio.CancelledError:
                 pass
 
-    def restart(self) -> None:
-        self.lis.stop()
+    async def restart(self) -> None:
+        if self.lis:
+            await self.lis.stop()
         os.execv(sys.executable, [sys.executable] + sys.argv)
         # os._exit(1)
 

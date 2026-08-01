@@ -1,0 +1,11 @@
+preset = "strict"
+project-includes = ["src"]
+project-excludes = ["logic.py"]
+
+[errors]
+# 存量代码缺类型注解/泛型参数的噪音，暂不补注解，静音处理
+implicit-any-type-argument = false
+implicit-any-parameter = false
+implicit-any-empty-container = false
+implicit-any-lambda = false
+implicit-any-attribute = false

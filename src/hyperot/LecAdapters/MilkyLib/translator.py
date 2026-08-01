@@ -1,6 +1,7 @@
 import json
 from typing import TYPE_CHECKING
 
+from typing_extensions import override
 from websockets.asyncio.client import connect as wsc
 
 from hyperot.network import WebsocketConnection, httpx_post
@@ -203,13 +204,17 @@ def to_milky_message(message: "Message") -> list[dict]:
 
 
 class MilkyHttpConnection(WebsocketConnection):
+    @override
     async def connect(self) -> None:
         if self.auth:
             self.ws = await wsc(self.url + "/event", header={"Authorization": "Bearer " + self.auth})
         else:
             self.ws = await wsc(self.url + "/event")
 
+    @override
     async def recv(self) -> dict | None:
+        if self.ws is None:
+            raise RuntimeError("没有建立连接")
         milky_rp = json.loads(await self.ws.recv())
         milky_event_type = milky_rp.get("event_type") or milky_rp.get("type")
         milky_time = milky_rp["time"]

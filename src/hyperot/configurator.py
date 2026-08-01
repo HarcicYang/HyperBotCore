@@ -1,4 +1,5 @@
 from cfgr.manager import BaseConfig
+from typing_extensions import override
 
 __all__ = ["BotConfig", "BotHTTPC", "BotWSC", "MilkyConnection"]
 
@@ -50,6 +51,7 @@ class BotConfig(BaseConfig):
     max_workers: int
     others: dict
 
+    @override
     def custom_post(self, **kwargs):
         if isinstance(self.connection, dict):
             match self.protocol:

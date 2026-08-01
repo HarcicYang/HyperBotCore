@@ -49,7 +49,7 @@ node = CustomNode(
 ## 进程重启
 
 ```python
-cli.restart()  # 停止监听器并用 os.execv 重启进程
+await cli.restart()  # 停止监听器并用 os.execv 重启进程
 ```
 
 适用于热重载场景。注意：`os.execv` 会完全替换当前进程。
