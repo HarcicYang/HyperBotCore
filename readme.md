@@ -12,7 +12,7 @@
 
 ## 概览
 
-HypeR Core 是一个基于 Python asyncio 的 QQ 机器人框架，提供简洁的事件系统、消息构建器和类型安全的 API 响应。当前支持 [OneBot v11](https://github.com/botuniverse/onebot-11) 与 [Milky](https://milky.ntqqrev.org/) 两种协议，通过配置文件切换，业务代码无需改动。适配器经注册表动态加载，支持运行时注册与 entry points 自动发现，可接入自定义协议（见[高级用法](./documents/zh/advanced.md)）。
+HypeR Core 是一个基于 Python asyncio 的 QQ 机器人框架，提供简洁的事件系统、消息构建与类型安全的 API 响应。当前支持 [OneBot v11](https://github.com/botuniverse/onebot-11) 与 [Milky](https://milky.ntqqrev.org/) 两种协议，通过配置文件切换，业务代码无需改动。适配器经注册表动态加载，支持运行时注册与 entry points 自动发现，可接入自定义协议（见[高级用法](./documents/zh/advanced.md)）。
 
 [English Documentation](./documents/en.md)
 [中文文档](./documents/zh.md)

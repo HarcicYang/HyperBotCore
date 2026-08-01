@@ -66,7 +66,6 @@ class Logger:
 
     @classmethod
     def fetch(cls, key: str):
-        print(cls.running_loggers)
         return cls.running_loggers.get(key)
 
     def set_level(self, level: str):
@@ -112,13 +111,10 @@ class Logger:
         time = color_txt(nf_icons.nf_weather_time_4 + " " + now, rgb(65, 128, 176))
         if "\n" in message:
             listed = message.split("\n")
-            for i in listed:
-                if listed.index(i) == 0:
-                    listed[0] = "\n"
-                    content = f" {time} {level} {color_txt(i, rgb(215, 255, 255))}"
-                else:
-                    content = " " * int((len(f"{time}{level}") - 2) / 2) + color_txt(i, rgb(215, 255, 255))
-                print(content)
+            print(f" {time} {level} {color_txt(listed[0], rgb(215, 255, 255))}")
+            pad = " " * int((len(f"{time}{level}") - 2) / 2)
+            for i in listed[1:]:
+                print(pad + color_txt(i, rgb(215, 255, 255)))
         else:
             content = f" {time} {level} {color_txt(message, rgb(215, 255, 255))}"
             print(content)

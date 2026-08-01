@@ -348,7 +348,23 @@ def test_actions_forward_solve(monkeypatch):
 
 
 def test_actions_send_group_forward_msg(monkeypatch):
+    captured = []
+    monkeypatch.setattr(
+        Packet,
+        "send_to",
+        _fake_send_to(captured, {"status": "ok", "retcode": 0, "data": {"message_id": 7, "forward_id": "fwd2"}}),
+    )
+    actions = _actions()
 
+    ret = asyncio.run(actions.send_group_forward_msg(4, Message(Text("hi"))))
+    assert captured == [
+        ("send_group_forward_msg", {"group_id": 4, "messages": [{"type": "text", "data": {"text": "hi"}}]})
+    ]
+    assert ret.data.message_id == 7
+    assert ret.data.forward_id == "fwd2"
+
+
+def test_actions_send_group_forward_msg_res_id_fallback(monkeypatch):
     captured = []
     monkeypatch.setattr(
         Packet,
@@ -358,10 +374,8 @@ def test_actions_send_group_forward_msg(monkeypatch):
     actions = _actions()
 
     ret = asyncio.run(actions.send_group_forward_msg(4, Message(Text("hi"))))
-    assert captured == [
-        ("send_group_forward_msg", {"group_id": 4, "messages": [{"type": "text", "data": {"text": "hi"}}]})
-    ]
-    assert ret.data.res_id == "fwd2"
+    assert ret.data.message_id == 0
+    assert ret.data.forward_id == "fwd2"
 
 
 def test_actions_group_add_request(monkeypatch):

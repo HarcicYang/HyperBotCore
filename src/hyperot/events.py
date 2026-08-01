@@ -54,8 +54,7 @@ logger: hyperogger.Logger
 def init():
     global config, logger
     config = configurator.BotConfig.get("hyper-bot")
-    logger = hyperogger.Logger()
-    logger.set_level(config.log_level)
+    logger = hyperogger.Logger.create("hyperot.events", config.log_level)
 
 
 class EventManager:

@@ -1,11 +1,11 @@
 import json
-import logging
 import queue
 import threading
-import traceback
 
-import flask
 import httpx
+import uvicorn
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from websockets.asyncio.client import ClientConnection
 from websockets.asyncio.client import connect as wsc
 
@@ -65,30 +65,28 @@ class HTTPConnection:
             self.port = int(listener_url.split(":")[1])
         except IndexError:
             self.port = 8080
-        self.app = flask.Flask(__name__)
-        self.app.config["LOGGER_HANDLER_POLICY"] = "never"
-        logging.getLogger("werkzeug").setLevel(logging.ERROR)
         self.reports = queue.Queue()
         self.auth = auth
 
         self.listener_started = False
+        self._server: uvicorn.Server | None = None
+        self.app = FastAPI()
+
+        @self.app.post(self.listener_endpoint)
+        async def listener(request: Request) -> JSONResponse:
+            self.reports.put(await request.json())
+            return JSONResponse({})
 
     def __start_listener(self) -> None:
-        @self.app.route(self.listener_endpoint, methods=["POST"])
-        def listener():
-            self.reports.put(flask.request.json)
-            return {}
-
-            # self.app.run(host=self.listener_url, port=self.port)
-
-        threading.Thread(target=lambda: self.app.run(host=self.listener_url, port=self.port)).start()
+        config = uvicorn.Config(self.app, host=self.listener_url, port=self.port, log_level="warning")
+        self._server = uvicorn.Server(config)
+        threading.Thread(target=self._server.run, daemon=True).start()
         self.listener_started = True
 
     async def connect(self) -> None:
         if not self.listener_started:
             self.__start_listener()
         await httpx_post(self.url, {})
-        traceback.print_exc()
 
     async def recv(self) -> dict:
         return self.reports.get()
@@ -105,7 +103,5 @@ class HTTPConnection:
         self.reports.put(res)
 
     async def close(self) -> None:
-        shutdown_func = flask.request.environ.get("werkzeug.server.shutdown")
-        if shutdown_func is None:
-            raise RuntimeError("Not running with the Werkzeug Server")
-        shutdown_func()
+        if self._server is not None:
+            self._server.should_exit = True

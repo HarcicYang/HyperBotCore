@@ -28,16 +28,6 @@ len(msg)              # Number of segments
 for seg in msg: ...   # Iterate segments
 ```
 
-## MessageBuilder (Fluent API)
-
-```python
-msg = Message.builder \
-    .text("Hello") \
-    .at("123456") \
-    .image(file="file:///path/to/image.png") \
-    .build()
-```
-
 ## Segment Types
 
 ### Basic Segments

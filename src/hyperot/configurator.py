@@ -1,6 +1,8 @@
 from cfgr.manager import BaseConfig
 from typing_extensions import override
 
+from .utils.errors import ConfigError
+
 __all__ = ["BotConfig", "BotHTTPC", "BotWSC", "MilkyConnection"]
 
 
@@ -52,17 +54,24 @@ class BotConfig(BaseConfig):
 
     @override
     def custom_post(self, **kwargs):
-        if isinstance(self.connection, dict):
-            match self.protocol:
-                case "OneBot":
-                    if self.connection["mode"] == "FWS":
-                        self.connection = BotWSC(**self.connection)
-                    elif self.connection["mode"] == "HTTPC":
-                        self.connection = BotHTTPC(**self.connection)
-                case "Milky":
-                    self.connection = MilkyConnection(**self.connection)
-        else:
-            raise TypeError()
+        if isinstance(self.connection, (BotWSC, BotHTTPC, MilkyConnection)):
+            return
+        if not isinstance(self.connection, dict):
+            raise TypeError(f"无效的 connection 配置：{type(self.connection).__name__}")
+
+        match self.protocol:
+            case "OneBot":
+                mode = self.connection.get("mode")
+                if mode == "FWS":
+                    self.connection = BotWSC(**self.connection)
+                elif mode == "HTTPC":
+                    self.connection = BotHTTPC(**self.connection)
+                else:
+                    raise ConfigError(f"未知的连接模式：{mode}")
+            case "Milky":
+                self.connection = MilkyConnection(**self.connection)
+            case _:
+                raise ConfigError(f"未知的协议：{self.protocol}")
 
         if isinstance(self.connection, dict):
-            raise TypeError()
+            raise ConfigError("connection 配置无法解析，请检查 protocol 与 mode 是否匹配")

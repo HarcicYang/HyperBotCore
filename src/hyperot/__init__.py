@@ -144,14 +144,12 @@ def init(cfg_file: str = "config.json") -> "hyperogger.Logger":
         print("没有找到配置文件，已自动创建，请填写后重启")
         sys.exit(-1)
 
-    if True:
-        from hyperot import hyperogger
-        from hyperot.adapters import registry
+    from hyperot import hyperogger
+    from hyperot.adapters import registry
 
-        config = configurator.BotConfig.get("hyper-bot")
-        logger = hyperogger.Logger()
-        logger.set_level(config.log_level)
+    config = configurator.BotConfig.get("hyper-bot")
+    logger = hyperogger.Logger.create("hyperot", config.log_level)
 
-        registry.load(config.protocol)
+    registry.load(config.protocol)
 
     return logger

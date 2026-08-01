@@ -1,5 +1,6 @@
 import asyncio
 
+from hyperot.hyperogger import Logger
 from hyperot.utils import KeyQueue
 from hyperot.utils.errors import (
     ArgsInvalidError,
@@ -10,6 +11,12 @@ from hyperot.utils.errors import (
     NotSupportError,
 )
 from hyperot.utils.typextensions import ObjectedJson
+
+
+def test_logger_create_and_fetch():
+    logger = Logger.create("test_module", "ERROR")
+    assert Logger.fetch("test_module") is logger
+    assert Logger.fetch("missing_module") is None
 
 
 def test_objected_json_nested_access():

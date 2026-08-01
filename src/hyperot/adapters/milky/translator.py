@@ -14,8 +14,7 @@ if TYPE_CHECKING:
     from ...common import Message
 
 config = configurator.BotConfig.get("hyper-bot")
-logger = hyperogger.Logger()
-logger.set_level(config.log_level)
+logger = hyperogger.Logger.create("hyperot.adapter.milky.translator", config.log_level)
 
 
 class MilkyOutGoingSegBuilder:

@@ -28,16 +28,6 @@ len(msg)              # 消息段数量
 for seg in msg: ...   # 迭代消息段
 ```
 
-## MessageBuilder（链式构建）
-
-```python
-msg = Message.builder \
-    .text("Hello") \
-    .at("123456") \
-    .image(file="file:///path/to/image.png") \
-    .build()
-```
-
 ## 消息段类型
 
 ### 基础消息段

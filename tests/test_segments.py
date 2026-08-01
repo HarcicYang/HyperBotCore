@@ -62,6 +62,17 @@ def test_message_types_registry():
     assert "image" in message_types
 
 
-def test_message_builder():
-    m = Message.builder.text("hi").at("123").build()
-    assert str(m) == "hi@123"
+def test_message_add_does_not_mutate_operand():
+    a = Message(Text("a"))
+    b = Message(Text("b"))
+    c = a + b
+    assert str(c) == "ab"
+    assert str(a) == "a"  # __add__ 不得污染操作数
+    assert str(b) == "b"
+
+
+def test_message_iadd_mutates_in_place():
+    a = Message(Text("a"))
+    b = Message(Text("b"))
+    a += b
+    assert str(a) == "ab"

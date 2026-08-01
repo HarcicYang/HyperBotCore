@@ -15,9 +15,12 @@ logger.debug("调试")
 logger.trace("追踪")
 logger.critical("严重")
 
-# 命名日志实例
+# 命名日志实例（create 后可用 fetch 获取）
+Logger.create("my_module", "DEBUG")
 logger2 = Logger.fetch("my_module")
 ```
+
+框架内部模块（如 `hyperot.protocol.listener`、`hyperot.adapter.onebot.actions`）也会以对应 key 注册命名日志实例，可用 `Logger.fetch("hyperot.protocol.listener")` 获取。
 
 ## 异常类型
 

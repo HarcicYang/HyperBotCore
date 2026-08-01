@@ -20,8 +20,7 @@ from ...utils.apiresponse import (
 from .packet import Packet
 
 config = configurator.BotConfig.get("hyper-bot")
-logger = hyperogger.Logger()
-logger.set_level(config.log_level)
+logger = hyperogger.Logger.create("hyperot.adapter.onebot.actions", config.log_level)
 
 
 class OneBotActions(ActionsBase):
@@ -141,7 +140,7 @@ class OneBotActions(ActionsBase):
     async def send_group_forward_msg(self, group_id: int, message: common.Message) -> common.Ret[SendGrpForwardRsp]:
         packet = Packet("send_group_forward_msg", group_id=group_id, messages=await message.get())
         await packet.send_to(self.connection)
-        return await common.Ret.fetch(packet.echo, SendForwardRsp)
+        return await common.Ret.fetch(packet.echo, SendGrpForwardRsp)
 
     @override
     async def set_group_add_request(

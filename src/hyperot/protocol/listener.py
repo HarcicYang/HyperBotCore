@@ -14,8 +14,7 @@ from .actions import ActionsBase
 
 __all__ = ["BaseListener"]
 
-logger = hyperogger.Logger()
-logger.set_level(configurator.BotConfig.get("hyper-bot").log_level)
+logger = hyperogger.Logger.create("hyperot.protocol.listener", configurator.BotConfig.get("hyper-bot").log_level)
 
 
 async def tester(message_data: Any, actions: ActionsBase) -> None: ...

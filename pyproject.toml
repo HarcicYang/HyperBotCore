@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hyper-bot"
-version = "0.90.0"
+version = "0.91.0"
 description = "稳定高效、易于开发的QQ Bot框架"
 authors = [
     { name = "Harcic", email = "harcic@outlook.com" },
@@ -13,13 +13,11 @@ urls = { repository = "https://github.com/HarcicYang/HypeR_Bot" }
 requires-python = ">=3.10"
 dependencies = [
     "setuptools",
-    "aiohttp~=3.9.5",
-    "requests~=2.31.0",
     "httpx~=0.26.0",
     "websockets",
-    "Flask~=3.0.0",
+    "fastapi",
+    "uvicorn",
     "ucfgr>=0.0.5",
-    "PyYAML",
     "pyrefly>=0.60.0",
     "typing_extensions>=4.9",
 ]

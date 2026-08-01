@@ -28,8 +28,7 @@ from .translator import (
 )
 
 config = configurator.BotConfig.get("hyper-bot")
-logger = hyperogger.Logger()
-logger.set_level(config.log_level)
+logger = hyperogger.Logger.create("hyperot.adapter.milky.actions", config.log_level)
 
 
 class MilkyActions(ActionsBase):

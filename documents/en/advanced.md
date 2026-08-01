@@ -15,10 +15,12 @@ logger.debug("Debug")
 logger.trace("Trace")
 logger.critical("Critical")
 
-# Named loggers
+# Named loggers (fetch after create)
+Logger.create("my_module", "DEBUG")
 logger2 = Logger.fetch("my_module")
-
 ```
+
+Framework modules (e.g. `hyperot.protocol.listener`, `hyperot.adapter.onebot.actions`) also register named instances under their module keys, retrievable via `Logger.fetch("hyperot.protocol.listener")`.
 
 ## Exceptions
 

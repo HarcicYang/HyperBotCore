@@ -1,7 +1,7 @@
 from collections.abc import Callable
 from typing import Any, Generic, Self, TypeVar
 
-from . import configurator, segments
+from . import configurator
 from .adapters import registry
 from .utils.typextensions import ObjectedJson
 
@@ -9,32 +9,7 @@ config = configurator.BotConfig.get("hyper-bot")
 T = TypeVar("T")
 
 
-class MessageBuilder:
-    def __init__(self):
-        self.sgs = []
-
-    def __getattr__(self, item):
-        if item == "build":
-
-            def build() -> Message:
-                return Message(*self.sgs)
-
-            return build
-
-        elif item in segments.message_types:
-
-            def wrapper(*args, **kwargs):
-                self.sgs.append(segments.message_types[item]["type"](*args, **kwargs))
-                return self
-
-            return wrapper
-        else:
-            return None
-
-
 class Message:
-    builder = MessageBuilder()
-
     def __init__(self, *args):
         if len(args) == 1 and isinstance(args[0], list):
             contents = args[0]
@@ -78,8 +53,7 @@ class Message:
         return str(self.contents)
 
     def __add__(self, new):
-        self.contents += new.contents
-        return self
+        return Message(*self.contents, *new.contents)
 
     def __iadd__(self, new):
         self.contents += new.contents

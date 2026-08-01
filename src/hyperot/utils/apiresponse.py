@@ -37,10 +37,6 @@ class MsgSendRsp(BaseResponse):
     def inner_build(self, json_data: dict):
         self.message_id = json_data["message_id"]
 
-    @classmethod
-    def build(cls, message_id: int):
-        return cls({"message_id": message_id})
-
 
 class GetLoginInfoRsp(BaseResponse):
     user_id: int
@@ -50,10 +46,6 @@ class GetLoginInfoRsp(BaseResponse):
     def inner_build(self, json_data: dict):
         self.user_id = json_data["user_id"]
         self.nickname = json_data["nickname"]
-
-    @classmethod
-    def build(cls, user_id: int, nickname: str):
-        return cls({"user_id": user_id, "nickname": nickname})
 
 
 class GetVerInfoRsp(BaseResponse):
@@ -66,10 +58,6 @@ class GetVerInfoRsp(BaseResponse):
         self.app_name = json_data["app_name"]
         self.app_version = json_data["app_version"]
         self.protocol_version = json_data["protocol_version"]
-
-    @classmethod
-    def build(cls, app_name: str, app_version: str, protocol_version: str):
-        return cls({"app_name": app_name, "app_version": app_version, "protocol_version": protocol_version})
 
 
 class SendForwardRsp(BaseResponse):
@@ -88,10 +76,6 @@ class SendForwardRsp(BaseResponse):
         else:
             self.res_id = json_data
 
-    @classmethod
-    def build(cls, res_id: str):
-        return cls({"res_id": res_id})
-
 
 class SendGrpForwardRsp(BaseResponse):
     message_id: int
@@ -99,12 +83,9 @@ class SendGrpForwardRsp(BaseResponse):
 
     @override
     def inner_build(self, json_data: dict):
-        self.message_id = json_data["message_id"]
-        self.forward_id = json_data["forward_id"]
-
-    @classmethod
-    def build(cls, message_id: int, forward_id: str):
-        return cls({"message_id": message_id, "forward_id": forward_id})
+        self.message_id = json_data.get("message_id", 0)
+        # 兼容部分协议端仅返回 res_id 的实现
+        self.forward_id = str(json_data.get("forward_id", json_data.get("res_id", "")))
 
 
 class GetStrInfoRsp(BaseResponse):
@@ -120,10 +101,6 @@ class GetStrInfoRsp(BaseResponse):
         self.sex = json_data["sex"]
         self.age = json_data["age"]
 
-    @classmethod
-    def build(cls, user_id: int, nickname: str, sex: str, age: int):
-        return cls({"user_id": user_id, "nickname": nickname, "sex": sex, "age": age})
-
 
 class GetGrpMemInfoRsp(BaseResponse):
     group_id: int
@@ -131,7 +108,7 @@ class GetGrpMemInfoRsp(BaseResponse):
     nickname: str
     card: str
     sex: str
-    age: str
+    age: int
     area: str
     join_time: int
     last_sent_time: int
@@ -160,10 +137,6 @@ class GetGrpMemInfoRsp(BaseResponse):
         self.title_expire_time = json_data["title_expire_time"]
         self.card_changeable = json_data["card_changeable"]
 
-    @classmethod
-    def build(cls, **kwargs):
-        return cls(**kwargs)
-
 
 class GetGrpInfoRsp(BaseResponse):
     group_id: int
@@ -177,17 +150,6 @@ class GetGrpInfoRsp(BaseResponse):
         self.group_name = json_data["group_name"]
         self.member_count = json_data["member_count"]
         self.max_member_count = json_data["max_member_count"]
-
-    @classmethod
-    def build(cls, group_id: int, group_name: str, member_count: int, max_member_count: int):
-        return cls(
-            {
-                "group_id": group_id,
-                "group_name": group_name,
-                "member_count": member_count,
-                "max_member_count": max_member_count,
-            }
-        )
 
 
 class GetMsgRsp(BaseResponse):
