@@ -83,7 +83,7 @@ res = await actions.send_msg("hello", group_id=123456)
 res.status  # str: "ok" / "failed"
 res.ret_code  # int: 返回码
 res.data  # T: 类型化响应数据
-res.echo  # str: 请求 echo ID
+res.echo  # str | None: 请求 echo ID（Milky 协议下为 None）
 res.raw  # dict: 原始 JSON
 ```
 

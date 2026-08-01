@@ -69,17 +69,19 @@ class Client:
             self.records[event].append(func)
 
     async def distributor(self, message_data: "events.Event | events.HyperNotify", actions: LISTENER_ACTIONS) -> None:
-        if type(message_data) in list(self.records.keys()):
-            tasks = []
-            for i in self.records[type(message_data)]:
-                tasks.append(asyncio.create_task(i(message_data, actions)))
-            await asyncio.gather(*tasks)
-        else:
+        matches = [(cls, handlers) for cls, handlers in self.records.items() if isinstance(message_data, cls)]
+        if not matches:
             return
+        # 最具体（MRO 最深）的订阅优先，避免父类订阅抢占子类事件
+        _cls, handlers = max(matches, key=lambda m: len(m[0].__mro__))
+        tasks = [asyncio.create_task(h(message_data, actions)) for h in handlers]
+        await asyncio.gather(*tasks)
 
     async def run(self):
-        from . import listener
+        from . import hyperogger, listener
 
+        if not self.records:
+            (hyperogger.Logger.fetch("hyperot") or hyperogger.Logger()).warning("未订阅任何事件类型，监听器将立即返回")
         self.lis = listener
         self.lis.reg(self.distributor)
         if self.records:

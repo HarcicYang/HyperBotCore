@@ -9,8 +9,10 @@ from fastapi.responses import JSONResponse
 from websockets.asyncio.client import ClientConnection
 from websockets.asyncio.client import connect as wsc
 
+DEFAULT_TIMEOUT = 30.0
 
-async def httpx_get(url: str, headers: dict | None = None, timeout: float | None = None) -> httpx.Response:
+
+async def httpx_get(url: str, headers: dict | None = None, timeout: float | None = DEFAULT_TIMEOUT) -> httpx.Response:
     async with httpx.AsyncClient(headers=headers, timeout=timeout) as client:
         return await client.get(url)
 
@@ -20,7 +22,7 @@ async def httpx_post(
     json: dict | None = None,
     data: str | None = None,
     headers: dict | None = None,
-    timeout: float | None = None,
+    timeout: float | None = DEFAULT_TIMEOUT,
 ) -> httpx.Response:
     async with httpx.AsyncClient(headers=headers, timeout=timeout) as client:
         return await client.post(url, json=json, data=data)  # pyrefly: ignore[bad-argument-type]
@@ -88,8 +90,11 @@ class HTTPConnection:
             self.__start_listener()
         await httpx_post(self.url, {})
 
-    async def recv(self) -> dict:
-        return self.reports.get()
+    async def recv(self) -> dict | None:
+        try:
+            return self.reports.get(timeout=DEFAULT_TIMEOUT)
+        except queue.Empty:
+            return None
 
     async def send(self, endpoint: str, data: dict, echo: str) -> None:
         if self.auth:
