@@ -53,3 +53,43 @@ await cli.restart()  # 停止监听器并用 os.execv 重启进程
 ```
 
 适用于热重载场景。注意：`os.execv` 会完全替换当前进程。
+
+## 自定义协议适配器
+
+框架通过 `hyperot.adapters.registry`（适配器注册表）动态加载协议。内置协议（`OneBot` / `Milky`）以 loader 函数表形式注册，未知协议名抛出 `NotImplementedError`。接入新协议有三种方式：
+
+### 1. 运行时注册（推荐）
+
+实现 `ActionsBase`（全部 API）与 `BaseListener`（hooks）后注册：
+
+```python
+from hyperot.adapters import Adapter, registry
+from hyperot.utils import KeyQueue
+
+def build_my_adapter() -> Adapter:
+    return Adapter(
+        name="MyProto",
+        actions_cls=MyActions,     # 继承 hyperot.protocol.ActionsBase
+        listener=MyListener(),     # 继承 hyperot.protocol.BaseListener
+        reports=KeyQueue(),        # echo 响应队列（无需 echo 机制可传空实例）
+    )
+
+registry.register_loader("MyProto", build_my_adapter)
+```
+
+之后在 `config.json` 中设置 `"protocol": "MyProto"` 并正常调用 `hyperot.init()` 即可。
+
+### 2. entry points 自动发现
+
+第三方协议包在 `pyproject.toml` 声明后，pip 安装即自动可见，无需注册：
+
+```toml
+[project.entry-points."hyperot.adapters"]
+MyProto = "my_protocol_pkg:build_my_adapter"
+```
+
+`build_my_adapter` 需为返回 `Adapter` 的可调用对象（loader 函数）。entry points 仅在配置的协议未命中已注册 loader 时扫描，不影响启动性能。
+
+### 3. 内置表
+
+框架内置适配器同样走 loader 表（`hyperot/adapters/__init__.py`），新增内置协议只需添加一个 loader 函数与一行注册。

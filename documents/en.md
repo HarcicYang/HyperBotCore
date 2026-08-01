@@ -10,7 +10,7 @@ HypeR Core is an asyncio-based QQ bot framework adapting both the OneBot v11 and
 - [Events](en/events.md) — All event types with attributes
 - [Messages & Segments](en/messages.md) — `Message`, segment types, builder, KeyBoard, MarkDown
 - [Actions (API)](en/actions.md) — All OneBot API methods and `Ret<T>` responses
-- [Advanced](en/advanced.md) — Logging, keyboard, Markdown, CustomNode, restart
+- [Advanced](en/advanced.md) — Logging, keyboard, Markdown, CustomNode, restart, custom protocol adapters
 
 ## License
 

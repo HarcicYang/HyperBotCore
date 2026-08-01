@@ -1,10 +1,20 @@
 from abc import ABC
+from collections.abc import Callable
 from typing import cast
 
-from ...utils.hypetyping import OneBotSegReg
-from .translator import milky_seg_from_dict
+from ..utils.hypetyping import OneBotSegReg
 
-message_types = {}
+__all__ = ["SegmentBase", "message_types", "register_milky_converter"]
+
+message_types: dict[str, OneBotSegReg] = {}
+
+_milky_seg_converter: Callable[[dict], dict] | None = None
+
+
+def register_milky_converter(func: Callable[[dict], dict]) -> None:
+    """注册 OneBot JSON 段到 Milky 段格式的转换器（由 Milky 适配器加载时调用）。"""
+    global _milky_seg_converter
+    _milky_seg_converter = func
 
 
 class SegmentBase(ABC):
@@ -42,7 +52,7 @@ class SegmentBase(ABC):
         sg_type = kwargs.get("sg_type") or kwargs.get("st")
         summary_tmp = kwargs.get("summary_tmp") or kwargs.get("su")
 
-        if sg_type is summary_tmp is None:
+        if sg_type is None:
             return
 
         cls.__sg_type = sg_type
@@ -50,9 +60,7 @@ class SegmentBase(ABC):
         cls.__anns: dict = cls.__var.get("__annotations__", False) or {}
 
         def to_str(self) -> str:
-            text = summary_tmp
-            if text is None:
-                text = "[]"
+            text = summary_tmp or "[]"
             if "<" not in text and ">" not in text:
                 return text
 
@@ -90,7 +98,9 @@ class SegmentBase(ABC):
         return base
 
     def milky_outgoing_seg(self) -> dict:
-        return milky_seg_from_dict(self.to_json())
+        if _milky_seg_converter is not None:
+            return _milky_seg_converter(self.to_json())
+        return self.to_json()
 
     def __str__(self) -> str:
         return "__not_set__"

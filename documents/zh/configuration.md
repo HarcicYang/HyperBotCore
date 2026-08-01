@@ -16,7 +16,6 @@
   "log_level": "INFO",
   "log_use_nf": true,
   "uin": 0,
-  "max_workers": 25,
   "others": {}
 }
 ```
@@ -34,7 +33,6 @@
 | `connection.port` | `int`               | 协议端端口                                                          |
 | `log_level`       | `str`               | 日志等级：`DEBUG` / `TRACE` / `INFO` / `WARNING` / `ERROR` / `CRITICAL` |
 | `log_use_nf`      | `bool`              | 是否启用 NerdFont 图标                                                   |
-| `max_workers`     | `int`               | 最大并发任务数                                                            |
 | `others`          | `dict`              | 自定义扩展配置                                                            |
 
 ## WebSocket 模式 (FWS)

@@ -2,14 +2,11 @@ from collections.abc import Callable
 from typing import Any, Generic, Self, TypeVar
 
 from . import configurator, segments
+from .adapters import registry
 from .utils.typextensions import ObjectedJson
 
 config = configurator.BotConfig.get("hyper-bot")
 T = TypeVar("T")
-
-from .adapters.common import *
-
-init()
 
 
 class MessageBuilder:
@@ -99,4 +96,6 @@ class Ret(Generic[T]):
 
     @classmethod
     async def fetch(cls, echo: str, serializer=ObjectedJson) -> Self:
-        return cls(await reports.get(echo), serializer)
+        if registry.current is None:
+            raise RuntimeError("适配器尚未加载，请先调用 hyperot.init()")
+        return cls(await registry.current.reports.get(echo), serializer)

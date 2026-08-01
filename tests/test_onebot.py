@@ -4,10 +4,13 @@ import re
 
 import pytest
 
+from hyperot.adapters.onebot import OneBotActions, OneBotListener
+from hyperot.adapters.onebot.listener import reports as ob_reports
+from hyperot.adapters.onebot.packet import Packet
 from hyperot.common import Message
 from hyperot.events import HyperListenerStartNotify
-from hyperot.LecAdapters.OneBotLib.Res import SegmentBase as OneBotSegmentBase
-from hyperot.LecAdapters.OneBotLib.Res import message_types as ob_message_types
+from hyperot.protocol.segments import SegmentBase as OneBotSegmentBase
+from hyperot.protocol.segments import message_types as ob_message_types
 from hyperot.segments import Forward, Node, Text
 from hyperot.utils import errors
 
@@ -24,17 +27,17 @@ class _FakeWS:
 
 
 def test_packet_fields():
-    from hyperot.LecAdapters.OneBotLib.Manager import Packet
+    from hyperot.adapters.onebot.packet import Packet
 
     p = Packet("send_msg", group_id=1, message=[])
     assert p.endpoint == "send_msg"
     assert p.paras == {"group_id": 1, "message": []}
-    assert re.fullmatch(r"send_msg_\d{4}", p.echo)
+    assert re.fullmatch(r"send_msg_[0-9a-f]{8}", p.echo)
 
 
 def test_packet_send_to_websocket(monkeypatch):
     from hyperot import network
-    from hyperot.LecAdapters.OneBotLib.Manager import Packet
+    from hyperot.adapters.onebot.packet import Packet
 
     sent = []
     conn = network.WebsocketConnection("ws://x")
@@ -56,7 +59,7 @@ def test_packet_send_to_websocket(monkeypatch):
 
 def test_packet_send_to_http(monkeypatch):
     from hyperot import network
-    from hyperot.LecAdapters.OneBotLib.Manager import Packet
+    from hyperot.adapters.onebot.packet import Packet
 
     sent = []
     conn = network.HTTPConnection("http://x:5004", "http://listener:8080")
@@ -144,31 +147,28 @@ def test_http_send_put_echo_response(monkeypatch):
 
 def _actions():
     from hyperot import network
-    from hyperot.LecAdapters import OneBot
 
-    return OneBot.Actions(network.WebsocketConnection("ws://x")), OneBot
+    return OneBotActions(network.WebsocketConnection("ws://x"))
 
 
 def _fake_send_to(captured, response):
-    from hyperot.LecAdapters.OneBotLib import Manager as Mgr
 
     async def fake(self, connection):
         captured.append((self.endpoint, self.paras))
-        await Mgr.reports.put(self.echo, response)
+        await ob_reports.put(self.echo, response)
 
     return fake
 
 
 def test_actions_send_msg(monkeypatch):
-    import hyperot.LecAdapters.OneBotLib.Manager as Mgr
 
     captured = []
     monkeypatch.setattr(
-        Mgr.Packet,
+        Packet,
         "send_to",
         _fake_send_to(captured, {"status": "ok", "retcode": 0, "data": {"message_id": 42}}),
     )
-    actions, _ = _actions()
+    actions = _actions()
 
     ret = asyncio.run(actions.send_msg(Message(Text("hi")), group_id=123))
     assert captured[-1] == ("send_msg", {"group_id": 123, "message": [{"type": "text", "data": {"text": "hi"}}]})
@@ -185,11 +185,10 @@ def test_actions_send_msg(monkeypatch):
 
 
 def test_actions_group_private_msg(monkeypatch):
-    import hyperot.LecAdapters.OneBotLib.Manager as Mgr
 
     captured = []
-    monkeypatch.setattr(Mgr.Packet, "send_to", _fake_send_to(captured, {"status": "ok", "retcode": 0, "data": {}}))
-    actions, _ = _actions()
+    monkeypatch.setattr(Packet, "send_to", _fake_send_to(captured, {"status": "ok", "retcode": 0, "data": {}}))
+    actions = _actions()
 
     asyncio.run(actions.send_group_msg("hi", group_id=1))
     assert captured[-1][1] == {"group_id": 1, "message": [{"type": "text", "data": {"text": "hi"}}]}
@@ -199,22 +198,20 @@ def test_actions_group_private_msg(monkeypatch):
 
 
 def test_actions_del_msg(monkeypatch):
-    import hyperot.LecAdapters.OneBotLib.Manager as Mgr
 
     captured = []
-    monkeypatch.setattr(Mgr.Packet, "send_to", _fake_send_to(captured, {"status": "ok", "retcode": 0, "data": {}}))
-    actions, _ = _actions()
+    monkeypatch.setattr(Packet, "send_to", _fake_send_to(captured, {"status": "ok", "retcode": 0, "data": {}}))
+    actions = _actions()
 
     asyncio.run(actions.del_msg(123))
     assert captured == [("delete_msg", {"message_id": 123})]
 
 
 def test_actions_kick_ban(monkeypatch):
-    import hyperot.LecAdapters.OneBotLib.Manager as Mgr
 
     captured = []
-    monkeypatch.setattr(Mgr.Packet, "send_to", _fake_send_to(captured, {"status": "ok", "retcode": 0, "data": {}}))
-    actions, _ = _actions()
+    monkeypatch.setattr(Packet, "send_to", _fake_send_to(captured, {"status": "ok", "retcode": 0, "data": {}}))
+    actions = _actions()
 
     asyncio.run(actions.set_group_kick(4, 3))
     asyncio.run(actions.set_group_ban(4, 3))
@@ -227,15 +224,14 @@ def test_actions_kick_ban(monkeypatch):
 
 
 def test_actions_login_and_version(monkeypatch):
-    import hyperot.LecAdapters.OneBotLib.Manager as Mgr
 
     captured = []
-    monkeypatch.setattr(Mgr.Packet, "send_to", _fake_send_to(captured, {"status": "ok", "retcode": 0, "data": {}}))
-    actions, _ = _actions()
+    monkeypatch.setattr(Packet, "send_to", _fake_send_to(captured, {"status": "ok", "retcode": 0, "data": {}}))
+    actions = _actions()
 
     captured.clear()
     monkeypatch.setattr(
-        Mgr.Packet,
+        Packet,
         "send_to",
         _fake_send_to(
             captured,
@@ -249,7 +245,7 @@ def test_actions_login_and_version(monkeypatch):
 
     captured.clear()
     monkeypatch.setattr(
-        Mgr.Packet,
+        Packet,
         "send_to",
         _fake_send_to(
             captured,
@@ -267,15 +263,14 @@ def test_actions_login_and_version(monkeypatch):
 
 
 def test_actions_send_forward_msg(monkeypatch):
-    import hyperot.LecAdapters.OneBotLib.Manager as Mgr
 
     captured = []
     monkeypatch.setattr(
-        Mgr.Packet,
+        Packet,
         "send_to",
         _fake_send_to(captured, {"status": "ok", "retcode": 0, "data": {"res_id": "fwd1"}}),
     )
-    actions, _ = _actions()
+    actions = _actions()
 
     ret = asyncio.run(actions.send_forward_msg(Message(Text("hi"))))
     assert captured == [("send_forward_msg", {"messages": [{"type": "text", "data": {"text": "hi"}}]})]
@@ -283,11 +278,10 @@ def test_actions_send_forward_msg(monkeypatch):
 
 
 def test_actions_get_forward_msg(monkeypatch):
-    import hyperot.LecAdapters.OneBotLib.Manager as Mgr
 
     captured = []
     monkeypatch.setattr(
-        Mgr.Packet,
+        Packet,
         "send_to",
         _fake_send_to(
             captured,
@@ -309,7 +303,7 @@ def test_actions_get_forward_msg(monkeypatch):
             },
         ),
     )
-    actions, _ = _actions()
+    actions = _actions()
 
     ret = asyncio.run(actions.get_forward_msg("fwd1"))
     assert captured == [("get_forward_msg", {"id": "fwd1"})]
@@ -318,11 +312,10 @@ def test_actions_get_forward_msg(monkeypatch):
 
 
 def test_actions_forward_solve(monkeypatch):
-    import hyperot.LecAdapters.OneBotLib.Manager as Mgr
 
     captured = []
     monkeypatch.setattr(
-        Mgr.Packet,
+        Packet,
         "send_to",
         _fake_send_to(
             captured,
@@ -344,7 +337,7 @@ def test_actions_forward_solve(monkeypatch):
             },
         ),
     )
-    actions, _ = _actions()
+    actions = _actions()
 
     ret = asyncio.run(actions.forward_solve(Message(Forward(content=[], id="fwd1"))))
     assert captured == [("get_forward_msg", {"id": "fwd1"})]
@@ -355,15 +348,14 @@ def test_actions_forward_solve(monkeypatch):
 
 
 def test_actions_send_group_forward_msg(monkeypatch):
-    import hyperot.LecAdapters.OneBotLib.Manager as Mgr
 
     captured = []
     monkeypatch.setattr(
-        Mgr.Packet,
+        Packet,
         "send_to",
         _fake_send_to(captured, {"status": "ok", "retcode": 0, "data": {"res_id": "fwd2"}}),
     )
-    actions, _ = _actions()
+    actions = _actions()
 
     ret = asyncio.run(actions.send_group_forward_msg(4, Message(Text("hi"))))
     assert captured == [
@@ -373,11 +365,10 @@ def test_actions_send_group_forward_msg(monkeypatch):
 
 
 def test_actions_group_add_request(monkeypatch):
-    import hyperot.LecAdapters.OneBotLib.Manager as Mgr
 
     captured = []
-    monkeypatch.setattr(Mgr.Packet, "send_to", _fake_send_to(captured, {"status": "ok", "retcode": 0, "data": {}}))
-    actions, _ = _actions()
+    monkeypatch.setattr(Packet, "send_to", _fake_send_to(captured, {"status": "ok", "retcode": 0, "data": {}}))
+    actions = _actions()
 
     asyncio.run(actions.set_group_add_request("f1", "add", True))
     asyncio.run(actions.set_group_add_request("f1", "invite", False, reason="no"))
@@ -388,18 +379,17 @@ def test_actions_group_add_request(monkeypatch):
 
 
 def test_actions_get_stranger_info(monkeypatch):
-    import hyperot.LecAdapters.OneBotLib.Manager as Mgr
 
     captured = []
     monkeypatch.setattr(
-        Mgr.Packet,
+        Packet,
         "send_to",
         _fake_send_to(
             captured,
             {"status": "ok", "retcode": 0, "data": {"user_id": 3, "nickname": "n", "sex": "male", "age": 20}},
         ),
     )
-    actions, _ = _actions()
+    actions = _actions()
 
     ret = asyncio.run(actions.get_stranger_info(3))
     assert captured == [("get_stranger_info", {"user_id": 3, "no_cache": True})]
@@ -408,11 +398,10 @@ def test_actions_get_stranger_info(monkeypatch):
 
 
 def test_actions_get_group_member_info(monkeypatch):
-    import hyperot.LecAdapters.OneBotLib.Manager as Mgr
 
     captured = []
     monkeypatch.setattr(
-        Mgr.Packet,
+        Packet,
         "send_to",
         _fake_send_to(
             captured,
@@ -439,7 +428,7 @@ def test_actions_get_group_member_info(monkeypatch):
             },
         ),
     )
-    actions, _ = _actions()
+    actions = _actions()
 
     ret = asyncio.run(actions.get_group_member_info(4, 3))
     assert captured == [("get_group_member_info", {"group_id": 4, "user_id": 3, "no_cache": True})]
@@ -450,11 +439,10 @@ def test_actions_get_group_member_info(monkeypatch):
 
 
 def test_actions_get_group_info(monkeypatch):
-    import hyperot.LecAdapters.OneBotLib.Manager as Mgr
 
     captured = []
     monkeypatch.setattr(
-        Mgr.Packet,
+        Packet,
         "send_to",
         _fake_send_to(
             captured,
@@ -465,7 +453,7 @@ def test_actions_get_group_info(monkeypatch):
             },
         ),
     )
-    actions, _ = _actions()
+    actions = _actions()
 
     ret = asyncio.run(actions.get_group_info(4))
     assert captured == [("get_group_info", {"group_id": 4, "no_cache": True})]
@@ -474,11 +462,10 @@ def test_actions_get_group_info(monkeypatch):
 
 
 def test_actions_get_status(monkeypatch):
-    import hyperot.LecAdapters.OneBotLib.Manager as Mgr
 
     captured = []
-    monkeypatch.setattr(Mgr.Packet, "send_to", _fake_send_to(captured, {"status": "ok", "retcode": 0, "data": {}}))
-    actions, _ = _actions()
+    monkeypatch.setattr(Packet, "send_to", _fake_send_to(captured, {"status": "ok", "retcode": 0, "data": {}}))
+    actions = _actions()
 
     ret = asyncio.run(actions.get_status())
     assert captured == [("get_status", {})]
@@ -486,11 +473,10 @@ def test_actions_get_status(monkeypatch):
 
 
 def test_actions_essence_title(monkeypatch):
-    import hyperot.LecAdapters.OneBotLib.Manager as Mgr
 
     captured = []
-    monkeypatch.setattr(Mgr.Packet, "send_to", _fake_send_to(captured, {"status": "ok", "retcode": 0, "data": {}}))
-    actions, _ = _actions()
+    monkeypatch.setattr(Packet, "send_to", _fake_send_to(captured, {"status": "ok", "retcode": 0, "data": {}}))
+    actions = _actions()
 
     asyncio.run(actions.set_essence_msg(9))
     asyncio.run(actions.set_group_special_title(4, 3, "title"))
@@ -501,11 +487,10 @@ def test_actions_essence_title(monkeypatch):
 
 
 def test_actions_get_msg(monkeypatch):
-    import hyperot.LecAdapters.OneBotLib.Manager as Mgr
 
     captured = []
     monkeypatch.setattr(
-        Mgr.Packet,
+        Packet,
         "send_to",
         _fake_send_to(
             captured,
@@ -533,7 +518,7 @@ def test_actions_get_msg(monkeypatch):
             },
         ),
     )
-    actions, _ = _actions()
+    actions = _actions()
 
     ret = asyncio.run(actions.get_msg(9))
     assert captured == [("get_msg", {"message_id": 9})]
@@ -543,46 +528,43 @@ def test_actions_get_msg(monkeypatch):
 
 
 def test_actions_send_callback(monkeypatch):
-    import hyperot.LecAdapters.OneBotLib.Manager as Mgr
 
     captured = []
-    monkeypatch.setattr(Mgr.Packet, "send_to", _fake_send_to(captured, {"status": "ok", "retcode": 0, "data": {}}))
-    actions, _ = _actions()
+    monkeypatch.setattr(Packet, "send_to", _fake_send_to(captured, {"status": "ok", "retcode": 0, "data": {}}))
+    actions = _actions()
 
     asyncio.run(actions.send_callback(4, 2, {"a": 1}))
     assert captured == [("send_group_bot_callback", {"group_id": 4, "bot_id": 2, "a": 1})]
 
 
 def test_actions_custom(monkeypatch):
-    import hyperot.LecAdapters.OneBotLib.Manager as Mgr
 
     captured = []
-    monkeypatch.setattr(Mgr.Packet, "send_to", _fake_send_to(captured, {"status": "ok", "retcode": 0, "data": {}}))
-    actions, _ = _actions()
+    monkeypatch.setattr(Packet, "send_to", _fake_send_to(captured, {"status": "ok", "retcode": 0, "data": {}}))
+    actions = _actions()
 
     echo = asyncio.run(actions.custom.get_cookies(domain="docs.qq.com"))
     assert captured == [("get_cookies", {"domain": "docs.qq.com"})]
-    assert re.fullmatch(r"get_cookies_\d{4}", echo)
+    assert re.fullmatch(r"get_cookies_[0-9a-f]{8}", echo)
 
 
 # ---------- __handler ----------
 
 
 def test_handler_echo_goes_to_reports(monkeypatch):
-    from hyperot.LecAdapters import OneBot
-    from hyperot.LecAdapters.OneBotLib import Manager as Mgr
+    lis = OneBotListener()
 
     called = []
 
     async def fake_handler(event, actions):
         called.append(event)
 
-    monkeypatch.setattr(OneBot, "handler", fake_handler)
-    actions, _ = _actions()
+    monkeypatch.setattr(lis, "handler", fake_handler)
+    actions = _actions()
 
     async def run():
-        await OneBot.__handler({"echo": "e1", "status": "ok", "retcode": 0, "data": {}}, actions)
-        return await Mgr.reports.get("e1")
+        await lis._handler({"echo": "e1", "status": "ok", "retcode": 0, "data": {}}, actions)
+        return await ob_reports.get("e1")
 
     res = asyncio.run(run())
     assert res["echo"] == "e1"
@@ -590,24 +572,24 @@ def test_handler_echo_goes_to_reports(monkeypatch):
 
 
 def test_handler_ignores_meta_and_self(monkeypatch):
-    from hyperot.LecAdapters import OneBot
+    lis = OneBotListener()
 
     called = []
 
     async def fake_handler(event, actions):
         called.append(event)
 
-    monkeypatch.setattr(OneBot, "handler", fake_handler)
-    actions, _ = _actions()
+    monkeypatch.setattr(lis, "handler", fake_handler)
+    actions = _actions()
 
     asyncio.run(
-        OneBot.__handler(
+        lis._handler(
             {"post_type": "meta_event", "meta_event_type": "lifecycle", "time": 1, "self_id": 100},
             actions,
         )
     )
     asyncio.run(
-        OneBot.__handler(
+        lis._handler(
             {
                 "time": 1,
                 "self_id": 100,
@@ -624,18 +606,18 @@ def test_handler_ignores_meta_and_self(monkeypatch):
 
 
 def test_handler_dispatches_event(monkeypatch):
-    from hyperot.LecAdapters import OneBot
+    lis = OneBotListener()
 
     called = []
 
     async def fake_handler(event, actions):
         called.append(type(event).__name__)
 
-    monkeypatch.setattr(OneBot, "handler", fake_handler)
-    actions, _ = _actions()
+    monkeypatch.setattr(lis, "handler", fake_handler)
+    actions = _actions()
 
     asyncio.run(
-        OneBot.__handler(
+        lis._handler(
             {
                 "time": 1,
                 "self_id": 100,
@@ -653,28 +635,25 @@ def test_handler_dispatches_event(monkeypatch):
 
 
 def test_handler_hypernotify(monkeypatch):
-    from hyperot.LecAdapters import OneBot
+    lis = OneBotListener()
 
     called = []
 
     async def fake_handler(event, actions):
         called.append(type(event).__name__)
 
-    monkeypatch.setattr(OneBot, "handler", fake_handler)
-    actions, _ = _actions()
+    monkeypatch.setattr(lis, "handler", fake_handler)
+    actions = _actions()
 
-    asyncio.run(OneBot.__handler(HyperListenerStartNotify(time_now=1, notify_type="listener_start"), actions))
+    asyncio.run(lis._handler(HyperListenerStartNotify(time_now=1, notify_type="listener_start"), actions))
     assert called == ["HyperListenerStartNotify"]
 
-
-# ---------- run() ----------
+    # ---------- run() ----------
 
 
 def test_run_requires_registered_handler():
-    from hyperot.LecAdapters import OneBot
-
     with pytest.raises(errors.ListenerNotRegisteredError):
-        asyncio.run(OneBot.run())
+        asyncio.run(OneBotListener().run())
 
 
 # ---------- OneBotLib.Res ----------

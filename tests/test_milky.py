@@ -3,9 +3,8 @@ import json
 
 import pytest
 
-from hyperot.common import Message
-from hyperot.LecAdapters.MilkyLib.Res import SegmentBase as MilkySegmentBase
-from hyperot.LecAdapters.MilkyLib.translator import (
+from hyperot.adapters.milky import MilkyActions
+from hyperot.adapters.milky.translator import (
     MilkyHttpConnection,
     MilkyOutGoingSegBuilder,
     message_translator,
@@ -14,8 +13,12 @@ from hyperot.LecAdapters.MilkyLib.translator import (
     msg_enid,
     node_list_to_milky_forward,
 )
-from hyperot.segments import At, Text
+from hyperot.common import Message
+from hyperot.protocol.segments import register_milky_converter
+from hyperot.segments import At, Image, Text
 from hyperot.utils import errors
+
+register_milky_converter(milky_seg_from_dict)
 
 
 def test_msg_enid_deid_roundtrip():
@@ -446,7 +449,7 @@ def test_http_send_url_and_auth(monkeypatch):
 
         return Rsp()
 
-    import hyperot.LecAdapters.MilkyLib.translator as tr
+    from hyperot.adapters.milky import translator as tr
 
     monkeypatch.setattr(tr, "httpx_post", fake_post)
     conn = MilkyHttpConnection("ws://example.com", auth="secret")
@@ -469,7 +472,7 @@ def test_http_send_without_auth(monkeypatch):
 
         return Rsp()
 
-    import hyperot.LecAdapters.MilkyLib.translator as tr
+    from hyperot.adapters.milky import translator as tr
 
     monkeypatch.setattr(tr, "httpx_post", fake_post)
     conn = MilkyHttpConnection("ws://example.com")
@@ -479,43 +482,28 @@ def test_http_send_without_auth(monkeypatch):
     assert calls["headers"] is None
 
 
-class MilkyText(MilkySegmentBase, st="text"):
-    text: str
-
-
-class MilkyAt(MilkySegmentBase, st="at"):
-    qq: str
-
-
-class MilkyImage(MilkySegmentBase, st="image"):
-    file: str
-    summary: str = "[Image]"
-
-
 def test_milky_outgoing_seg_text():
-    assert MilkyText("hi").milky_outgoing_seg() == {"type": "text", "data": {"text": "hi"}}
+    assert Text("hi").milky_outgoing_seg() == {"type": "text", "data": {"text": "hi"}}
 
 
 def test_milky_outgoing_seg_at():
-    assert MilkyAt(qq="42").milky_outgoing_seg() == {"type": "mention", "data": {"user_id": 42}}
-    assert MilkyAt(qq="all").milky_outgoing_seg() == {"type": "mention_all", "data": {}}
+    assert At(qq="42").milky_outgoing_seg() == {"type": "mention", "data": {"user_id": 42}}
+    assert At(qq="all").milky_outgoing_seg() == {"type": "mention_all", "data": {}}
 
 
 def test_milky_outgoing_seg_image():
-    assert MilkyImage(file="http://a/b.png").milky_outgoing_seg() == {
+    assert Image(file="http://a/b.png").milky_outgoing_seg() == {
         "type": "image",
         "data": {"uri": "http://a/b.png", "summary": "[Image]", "sub_type": "normal"},
     }
 
 
-def _actions() -> tuple:
-    from hyperot.LecAdapters import Milky
-
-    return Milky.Actions(MilkyHttpConnection("ws://example.com")), Milky
+def _actions() -> MilkyActions:
+    return MilkyActions(MilkyHttpConnection("ws://example.com"))
 
 
 def test_actions_send_msg(monkeypatch):
-    import hyperot.LecAdapters.MilkyLib.Manager as Mgr
+    from hyperot.adapters.milky.packet import Packet
 
     captured = {}
 
@@ -524,24 +512,24 @@ def test_actions_send_msg(monkeypatch):
         captured["paras"] = self.paras
         return {"status": "ok", "retcode": 0, "data": {"message_seq": 7, "time": 1}}
 
-    monkeypatch.setattr(Mgr.Packet, "send_to", fake_send_to)
-    actions, _ = _actions()
+    monkeypatch.setattr(Packet, "send_to", fake_send_to)
+    actions = _actions()
 
-    ret = asyncio.run(actions.send_msg(MilkyText("hi"), group_id=123))
+    ret = asyncio.run(actions.send_msg(Text("hi"), group_id=123))
     assert captured["endpoint"] == "send_group_message"
     assert captured["paras"] == {"group_id": 123, "message": [{"type": "text", "data": {"text": "hi"}}]}
     assert ret.data.message_id == msg_enid(1, 7, 123)
 
-    asyncio.run(actions.send_msg(MilkyText("hi"), user_id=321))
+    asyncio.run(actions.send_msg(Text("hi"), user_id=321))
     assert captured["endpoint"] == "send_private_message"
     assert captured["paras"] == {"user_id": 321, "message": [{"type": "text", "data": {"text": "hi"}}]}
 
     with pytest.raises(errors.ArgsInvalidError):
-        asyncio.run(actions.send_msg(MilkyText("hi")))
+        asyncio.run(actions.send_msg(Text("hi")))
 
 
 def test_actions_del_msg(monkeypatch):
-    import hyperot.LecAdapters.MilkyLib.Manager as Mgr
+    from hyperot.adapters.milky.packet import Packet
 
     captured = []
 
@@ -549,8 +537,8 @@ def test_actions_del_msg(monkeypatch):
         captured.append((self.endpoint, self.paras))
         return {"status": "ok", "retcode": 0, "data": {}}
 
-    monkeypatch.setattr(Mgr.Packet, "send_to", fake_send_to)
-    actions, _ = _actions()
+    monkeypatch.setattr(Packet, "send_to", fake_send_to)
+    actions = _actions()
 
     asyncio.run(actions.del_msg(msg_enid(1, 5, 4)))
     asyncio.run(actions.del_msg(msg_enid(0, 5, 3)))
@@ -561,7 +549,7 @@ def test_actions_del_msg(monkeypatch):
 
 
 def test_actions_set_group_add_request(monkeypatch):
-    import hyperot.LecAdapters.MilkyLib.Manager as Mgr
+    from hyperot.adapters.milky.packet import Packet
 
     captured = []
 
@@ -569,8 +557,8 @@ def test_actions_set_group_add_request(monkeypatch):
         captured.append((self.endpoint, self.paras))
         return {"status": "ok", "retcode": 0, "data": {}}
 
-    monkeypatch.setattr(Mgr.Packet, "send_to", fake_send_to)
-    actions, _ = _actions()
+    monkeypatch.setattr(Packet, "send_to", fake_send_to)
+    actions = _actions()
 
     asyncio.run(actions.set_group_add_request("4:9", "add", True))
     asyncio.run(actions.set_group_add_request("4:9", "invite", False, reason="no"))
@@ -584,7 +572,7 @@ def test_actions_set_group_add_request(monkeypatch):
 
 
 def test_actions_get_login_info_and_version(monkeypatch):
-    import hyperot.LecAdapters.MilkyLib.Manager as Mgr
+    from hyperot.adapters.milky.packet import Packet
 
     captured = []
 
@@ -598,8 +586,8 @@ def test_actions_get_login_info_and_version(monkeypatch):
             "data": {"impl_name": "MilkyImpl", "impl_version": "1.0", "milky_version": "1.2"},
         }
 
-    monkeypatch.setattr(Mgr.Packet, "send_to", fake_send_to)
-    actions, _ = _actions()
+    monkeypatch.setattr(Packet, "send_to", fake_send_to)
+    actions = _actions()
 
     login = asyncio.run(actions.get_login_info())
     assert login.data.user_id == 123
@@ -611,7 +599,7 @@ def test_actions_get_login_info_and_version(monkeypatch):
 
 
 def test_actions_custom(monkeypatch):
-    import hyperot.LecAdapters.MilkyLib.Manager as Mgr
+    from hyperot.adapters.milky.packet import Packet
 
     captured = []
 
@@ -619,8 +607,8 @@ def test_actions_custom(monkeypatch):
         captured.append((self.endpoint, self.paras))
         return {"status": "ok", "retcode": 0, "data": {"groups": []}}
 
-    monkeypatch.setattr(Mgr.Packet, "send_to", fake_send_to)
-    actions, _ = _actions()
+    monkeypatch.setattr(Packet, "send_to", fake_send_to)
+    actions = _actions()
 
     res = asyncio.run(actions.custom.get_group_member_list(group_id=1))
     assert res == {"groups": []}
@@ -628,7 +616,7 @@ def test_actions_custom(monkeypatch):
 
 
 def test_actions_get_group_member_info(monkeypatch):
-    import hyperot.LecAdapters.MilkyLib.Manager as Mgr
+    from hyperot.adapters.milky.packet import Packet
 
     async def fake_send_to(self, connection):
         return {
@@ -647,8 +635,8 @@ def test_actions_get_group_member_info(monkeypatch):
             },
         }
 
-    monkeypatch.setattr(Mgr.Packet, "send_to", fake_send_to)
-    actions, _ = _actions()
+    monkeypatch.setattr(Packet, "send_to", fake_send_to)
+    actions = _actions()
 
     ret = asyncio.run(actions.get_group_member_info(4, 3))
     assert ret.data.user_id == 3
@@ -658,7 +646,7 @@ def test_actions_get_group_member_info(monkeypatch):
 
 
 def test_actions_get_group_info(monkeypatch):
-    import hyperot.LecAdapters.MilkyLib.Manager as Mgr
+    from hyperot.adapters.milky.packet import Packet
 
     async def fake_send_to(self, connection):
         return {
@@ -667,8 +655,8 @@ def test_actions_get_group_info(monkeypatch):
             "data": {"group": {"group_id": 4, "group_name": "测试群", "member_count": 7, "max_member_count": 200}},
         }
 
-    monkeypatch.setattr(Mgr.Packet, "send_to", fake_send_to)
-    actions, _ = _actions()
+    monkeypatch.setattr(Packet, "send_to", fake_send_to)
+    actions = _actions()
 
     ret = asyncio.run(actions.get_group_info(4))
     assert ret.data.group_name == "测试群"
@@ -677,7 +665,7 @@ def test_actions_get_group_info(monkeypatch):
 
 
 def test_http_send_non_json_response(monkeypatch):
-    import hyperot.LecAdapters.MilkyLib.translator as tr
+    from hyperot.adapters.milky import translator as tr
 
     class Rsp:
         status_code = 500
@@ -696,13 +684,13 @@ def test_http_send_non_json_response(monkeypatch):
 
 
 def test_actions_send_forward_unsupported(monkeypatch):
-    import hyperot.LecAdapters.MilkyLib.Manager as Mgr
+    from hyperot.adapters.milky.packet import Packet
 
     async def fake_send_to(self, connection):
         return {"status": "ok", "retcode": 0, "data": {}}
 
-    monkeypatch.setattr(Mgr.Packet, "send_to", fake_send_to)
-    actions, _ = _actions()
+    monkeypatch.setattr(Packet, "send_to", fake_send_to)
+    actions = _actions()
 
     with pytest.raises(NotImplementedError):
         asyncio.run(actions.send_forward_msg(Message(Text("x"))))

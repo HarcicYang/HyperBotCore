@@ -146,18 +146,12 @@ def init(cfg_file: str = "config.json") -> "hyperogger.Logger":
 
     if True:
         from hyperot import hyperogger
-        from hyperot.adapters import builtins as adp
+        from hyperot.adapters import registry
 
         config = configurator.BotConfig.get("hyper-bot")
         logger = hyperogger.Logger()
         logger.set_level(config.log_level)
 
-        match config.protocol:
-            case "OneBot":
-                adp.load_onebot()
-            case "Milky":
-                adp.load_milky()
-            case _:
-                raise NotImplementedError
+        registry.load(config.protocol)
 
     return logger

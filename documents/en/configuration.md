@@ -16,7 +16,6 @@ Create `config.json` in your bot project root:
   "log_level": "INFO",
   "log_use_nf": true,
   "uin": 0,
-  "max_workers": 25,
   "others": {}
 }
 ```
@@ -34,7 +33,6 @@ Create `config.json` in your bot project root:
 | `connection.port` | `int` | Protocol implementation port |
 | `log_level` | `str` | Log level: `DEBUG` / `TRACE` / `INFO` / `WARNING` / `ERROR` / `CRITICAL` |
 | `log_use_nf` | `bool` | Enable NerdFont icons in logs |
-| `max_workers` | `int` | Max concurrent tasks |
 | `others` | `dict` | Custom extension config |
 
 ## WebSocket Mode (FWS)

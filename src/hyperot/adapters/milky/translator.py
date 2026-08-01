@@ -7,7 +7,7 @@ from websockets.asyncio.client import connect as wsc
 from hyperot.network import WebsocketConnection, httpx_post
 
 from ... import configurator, hyperogger
-from ...adapters.obuilder import OneBotEventBuilder, OneBotJsonMessageBuilder
+from ...protocol.builder import OneBotEventBuilder, OneBotJsonMessageBuilder
 from ...utils import errors
 
 if TYPE_CHECKING:

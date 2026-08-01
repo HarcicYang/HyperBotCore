@@ -20,7 +20,6 @@ TEST_CONFIG = {
     "log_level": "ERROR",
     "log_use_nf": False,
     "uin": 0,
-    "max_workers": 1,
     "others": {},
 }
 

@@ -1,30 +1,15 @@
 import json
-import random
+import uuid
 
-from ... import configurator, hyperogger, network, utils
+from ... import network
 from ...utils.hypetyping import OneBotJsonPacket
-
-reports = utils.KeyQueue()
-
-config: configurator.BotConfig
-logger: hyperogger.Logger
-
-
-def init() -> None:
-    global config, logger
-    config = configurator.BotConfig.get("hyper-bot")
-    logger = hyperogger.Logger()
-    logger.set_level(config.log_level)
-
-
-servicing = []
 
 
 class Packet:
     def __init__(self, endpoint: str, **kwargs):
         self.endpoint = endpoint
         self.paras = kwargs
-        self.echo = f"{endpoint}_{random.randint(1000, 9999)}"
+        self.echo = f"{endpoint}_{uuid.uuid4().hex[:8]}"
 
     async def send_to(self, connection: network.WebsocketConnection | network.HTTPConnection) -> None:
         if isinstance(connection, network.WebsocketConnection):

@@ -48,7 +48,6 @@ class BotConfig(BaseConfig):
     log_level: str = "INFO"
     log_use_nf: bool = False
     uin: int
-    max_workers: int
     others: dict
 
     @override
