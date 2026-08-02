@@ -168,7 +168,7 @@ class Event(ABC):
         self.user_id = data.get("user_id")
         self.group_id = data.get("group_id")
 
-        self.is_owner = self.self_id in config.owner
+        self.is_owner = int(self.user_id or 0) in config.owner
         self.blocked = self.user_id in config.black_list or self.group_id in config.black_list
         self.is_silent = self.user_id in config.silents or self.group_id in config.silents or 0 in config.silents
 

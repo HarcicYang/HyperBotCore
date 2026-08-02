@@ -56,15 +56,15 @@ class MilkyActions(ActionsBase):
             message = common.Message(segments.Text(message))
         elif not isinstance(message, common.Message):
             message = common.Message(message)
-        if group_id is not None:
+        if group_id:
             endpoint, scene, peer = "send_group_message", 1, group_id
-        elif user_id is not None:
+        elif user_id:
             endpoint, scene, peer = "send_private_message", 0, user_id
         else:
             raise errors.ArgsInvalidError("'send' API requires 'group_id' or 'user_id' but none of them are provided.")
         res = await Packet(
             endpoint,
-            **{("group_id" if group_id is not None else "user_id"): peer},
+            **{("group_id" if group_id else "user_id"): peer},
             message=to_milky_message(message),
         ).send_to(self.connection)
         ret = common.Ret(res)
