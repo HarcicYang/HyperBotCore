@@ -139,7 +139,7 @@ class Contact(SegmentBase, st="contact"):
 @dataclasses.dataclass
 class Node(SegmentBase, st="node", su="[Node]"):
     user_id: str
-    nickname: str
+    nick_name: str
     content: dict | Message
 
 
