@@ -139,15 +139,15 @@ class Contact(SegmentBase, st="contact"):
 @dataclasses.dataclass
 class Node(SegmentBase, st="node", su="[Node]"):
     user_id: str
-    nick_name: str
+    nickname: str
     content: dict | Message
 
 
 class CustomNode:
-    def __init__(self, user_id: str, nick_name: str, content):
+    def __init__(self, user_id: str, nickname: str, content):
         self.content = {
             "type": "node",
-            "data": {"user_id": user_id, "nick_name": nick_name, "content": content.get_sync()},
+            "data": {"user_id": user_id, "nickname": nickname, "content": content.get_sync()},
         }
 
     def to_json(self) -> dict:

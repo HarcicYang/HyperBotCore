@@ -137,7 +137,7 @@ class MilkyActions(ActionsBase):
             content = gen_message({"message": message_translator(fm.get("segments", []), 0, 0)})
             nodes.append(
                 segments.Node(
-                    user_id=str(fm.get("message_seq", 0)), nick_name=fm.get("sender_name", ""), content=content
+                    user_id=str(fm.get("message_seq", 0)), nickname=fm.get("sender_name", ""), content=content
                 )
             )
         ret = common.Ret(res)
