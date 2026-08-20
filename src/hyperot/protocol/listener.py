@@ -5,7 +5,7 @@ import time
 from collections.abc import Callable
 from typing import Any
 
-from websockets.exceptions import ConnectionClosedError
+from websockets.exceptions import ConnectionClosed
 
 from .. import configurator, hyperogger
 from ..events import HyperListenerStartNotify, HyperListenerStopNotify, HyperNotify
@@ -90,7 +90,7 @@ class BaseListener:
                 while True:
                     try:
                         data = await connection.recv()
-                    except (ConnectionClosedError, ConnectionResetError):
+                    except (ConnectionClosed, ConnectionResetError):
                         logger.error("连接断开")
                         break
                     except json.decoder.JSONDecodeError:
