@@ -41,7 +41,7 @@ class MilkyOutGoingSegBuilder:
         self.segments.append({"type": "reply", "data": {"message_seq": seq}})
         return self
 
-    def image(self, uri: str, summary: str = "[Image]", sub_type: str = "normal") -> "MilkyOutGoingSegBuilder":
+    def image(self, uri: str, summary: str = "[图片]", sub_type: str = "normal") -> "MilkyOutGoingSegBuilder":
         self.segments.append({"type": "image", "data": {"uri": uri, "summary": summary, "sub_type": sub_type}})
         return self
 
@@ -86,7 +86,7 @@ def message_translator(milky_message: list[dict], peer_id: int, scene: int = 0) 
             case "text":
                 builder.text(seg_data["text"])
             case "image":
-                builder.image(file=seg_data["temp_url"], summary=seg_data.get("summary", "[Image]"))
+                builder.image(file=seg_data["temp_url"], summary=seg_data.get("summary", "[图片]"))
             case "mention":
                 builder.at(seg_data["user_id"])
             case "mention_all":
@@ -177,7 +177,7 @@ def _to_milky_seg(seg: dict) -> dict:
                 "type": "image",
                 "data": {
                     "uri": seg_data.get("file"),
-                    "summary": seg_data.get("summary", "[Image]"),
+                    "summary": seg_data.get("summary", "[图片]"),
                     "sub_type": seg_data.get("sub_type", "normal"),
                 },
             }

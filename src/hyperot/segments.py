@@ -81,9 +81,9 @@ class StreamTest(SegmentBase, st="stream", su="[Stream] <text>"):
 
 
 @dataclasses.dataclass
-class Image(MediaSeg, st="image", su="[Image]"):
+class Image(MediaSeg, st="image", su="[图片]"):
     file: str
-    summary: str = "[Image]"
+    summary: str = "[图片]"
     url: str | None = None
 
 

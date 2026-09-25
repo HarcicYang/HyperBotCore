@@ -39,7 +39,7 @@ def test_message_translator_basic():
     )
     assert ob == [
         {"type": "text", "data": {"text": "hi"}},
-        {"type": "image", "data": {"file": "http://a/b.png", "url": "http://a/b.png", "summary": "[Image]"}},
+        {"type": "image", "data": {"file": "http://a/b.png", "url": "http://a/b.png", "summary": "[图片]"}},
         {"type": "at", "data": {"qq": 123}},
         {"type": "at", "data": {"qq": "all"}},
     ]
@@ -494,7 +494,7 @@ def test_milky_outgoing_seg_at():
 def test_milky_outgoing_seg_image():
     assert Image(file="http://a/b.png").milky_outgoing_seg() == {
         "type": "image",
-        "data": {"uri": "http://a/b.png", "summary": "[Image]", "sub_type": "normal"},
+        "data": {"uri": "http://a/b.png", "summary": "[图片]", "sub_type": "normal"},
     }
 
 

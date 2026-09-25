@@ -46,7 +46,7 @@ Media segments inherit from `MediaSeg` and provide a `build(file)` class method 
 
 | Segment | Type | Constructor |
 |---------|------|-------------|
-| `Image` | `image` | `Image(file: str, summary="[Image]", url=None)` |
+| `Image` | `image` | `Image(file: str, summary="[图片]", url=None)` |
 | `Record` | `record` | `Record(file: str, url=None)` |
 | `Video` | `video` | `Video(file: str, url=None)` |
 

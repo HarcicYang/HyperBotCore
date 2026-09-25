@@ -191,7 +191,7 @@ class OneBotJsonMessageBuilder:
         self.message.append({"type": "text", "data": {"text": text}})
         return self
 
-    def image(self, file: str, summary: str = "[Image]") -> "OneBotJsonMessageBuilder":
+    def image(self, file: str, summary: str = "[图片]") -> "OneBotJsonMessageBuilder":
         self.message.append({"type": "image", "data": {"file": file, "url": file, "summary": summary}})
         return self
 

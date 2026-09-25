@@ -46,7 +46,7 @@ for seg in msg: ...   # 迭代消息段
 
 | 段类型 | OneBot type | 构造 |
 |---------|-------------|------|
-| `Image` | `image` | `Image(file: str, summary="[Image]", url=None)` |
+| `Image` | `image` | `Image(file: str, summary="[图片]", url=None)` |
 | `Record` | `record` | `Record(file: str, url=None)` |
 | `Video` | `video` | `Video(file: str, url=None)` |
 
