@@ -14,8 +14,23 @@
 
 HypeR Core 是一个基于 Python asyncio 的 QQ 机器人框架，提供简洁的事件系统、消息构建与类型安全的 API 响应。当前支持 [OneBot v11](https://github.com/botuniverse/onebot-11) 与 [Milky](https://milky.ntqqrev.org/) 两种协议，通过配置文件切换，业务代码无需改动。适配器经注册表动态加载，支持运行时注册与 entry points 自动发现，可接入自定义协议（见[高级用法](./documents/zh/advanced.md)）。
 
-[English Documentation](./documents/en.md)
-[中文文档](./documents/zh.md)
+## V2
+
+V2 在保留 V1 的同时提供协议无关的类型化模型、分层 Client API、标准库日志输出和独立适配器管理：
+
+```python
+from hyperot.v2 import Client
+
+client = Client.from_appconfig("appconfig.json")
+```
+
+适配器使用独立包分发，例如 `hyperot-adapter-onebot`，直接从 PyPI 安装：
+
+```shell
+pip install hyperot-adapter-onebot
+```
+
+详见 [V2 文档](./documents/v2/index.md)。
 
 ---
 
@@ -24,7 +39,7 @@ HypeR Core 是一个基于 Python asyncio 的 QQ 机器人框架，提供简洁�
 需要 Python 3.11+。
 
 ```shell
-pip install hyper-bot
+pip install hyper-bot hyperot-adapter-onebot
 ```
 
 开发和构建使用 [uv](https://docs.astral.sh/uv/)：
@@ -35,78 +50,8 @@ cd HyperBotCore
 uv sync
 ```
 
-## 文档
-
-- [快速开始](./documents/zh/getting-started.md)
-- [配置文件](./documents/zh/configuration.md)
-- [Client 与生命周期](./documents/zh/client.md)
-- [事件系统](./documents/zh/events.md)
-- [消息与消息段](./documents/zh/messages.md)
-- [Actions API 操作](./documents/zh/actions.md)
-- [高级用法](./documents/zh/advanced.md)
-
-## 简单示例
-
-```python
-import asyncio
-import hyperot
-
-hyperot.init()
-
-from hyperot import Client
-from hyperot.events import GroupMessageEvent, PrivateMessageEvent
-from hyperot.common import Message
-from hyperot.segments import *
-
-
-async def handler(event, actions):
-    if str(event.message) == ".ping":
-        await actions.send_msg(
-            f"pong! HypeR Core {hyperot.HYPER_BOT_VERSION}", group_id=event.group_id, user_id=event.user_id
-        )
-
-
-with Client() as cli:
-    cli.subscribe(handler, [GroupMessageEvent, PrivateMessageEvent])
-    asyncio.get_event_loop().run_until_complete(cli.run())
-```
-
 ## 许可
 
 GPL-3.0 License
 
 ---
-
-## Milky 协议
-
-除了 OneBot v11，HypeR Core 也支持 [Milky](https://milky.ntqqrev.org/) 协议——通过 `config.json` 的 `protocol: "Milky"` 切换，**业务代码无需改动**。框架作为应用端：WebSocket 连接 `/event` 接收事件，HTTP 调用 `/api/:api`。
-
-```json
-{
-  "protocol": "Milky",
-  "owner": [],
-  "black_list": [],
-  "silents": [],
-  "connection": {
-    "mode": "Milky",
-    "host": "127.0.0.1",
-    "port": 5005,
-    "auth": ""
-  },
-  "log_level": "INFO",
-  "log_use_nf": false,
-  "uin": 0,
-  "max_workers": 1,
-  "others": {}
-}
-```
-
-与 OneBot 的主要差异：
-
-- **事件**：Milky 事件（`message_receive`、`group_whole_mute`、`group_name_change`、`group_invitation`、戳一戳等）统一映射到框架事件模型，见[事件系统](./documents/zh/events.md)
-- **`message_id`**：为 `场景 + 序号 + 会话` 的编码值，`del_msg` 自动解码
-- **`actions.custom`**：直接返回响应 `data` 字典（OneBot 下返回 echo）
-- **限制**：`send_forward_msg` / `send_callback` 暂不支持；部分协议端（如 Lagrange.Milky）私聊撤回存在协议端侧 bug
-
-仓库提供 `test_milky.py` 真机联调脚本（`uv run python test_milky.py`），在 QQ 上发送 `.e2e` 可跑通全链路验证。
-

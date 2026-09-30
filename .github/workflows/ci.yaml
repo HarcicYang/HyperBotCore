@@ -32,5 +32,10 @@ jobs:
       - name: Pyrefly
         run: uv run pyrefly check
 
+      - name: Build distributions
+        run: |
+          uv build --package hyper-bot --out-dir dist/core
+          uv build --package hyperot-adapter-onebot --out-dir dist/adapter
+
       - name: Pytest
         run: uv run pytest

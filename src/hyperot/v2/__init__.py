@@ -1,0 +1,73 @@
+from .api import ClientAPI
+from .client import Client
+from .common import (
+    FileId,
+    GroupId,
+    MemberRole,
+    MessageId,
+    RequestId,
+    SceneId,
+    SceneType,
+    UserId,
+)
+from .events import (
+    BotOfflineEvent,
+    BotOnlineEvent,
+    ClientStartedEvent,
+    ClientStoppedEvent,
+    Event,
+    MessageReceivedEvent,
+    SceneEvent,
+)
+from .messages import (
+    Audio,
+    Face,
+    File,
+    Forward,
+    ForwardNode,
+    Image,
+    Markdown,
+    Mention,
+    MentionAll,
+    Message,
+    Quote,
+    Segment,
+    Text,
+    Video,
+)
+
+__version__ = "2.0.0"
+
+__all__ = [
+    "Audio",
+    "BotOfflineEvent",
+    "BotOnlineEvent",
+    "Client",
+    "ClientAPI",
+    "ClientStartedEvent",
+    "ClientStoppedEvent",
+    "Event",
+    "Face",
+    "File",
+    "FileId",
+    "Forward",
+    "ForwardNode",
+    "GroupId",
+    "Image",
+    "Markdown",
+    "MemberRole",
+    "Mention",
+    "MentionAll",
+    "Message",
+    "MessageId",
+    "MessageReceivedEvent",
+    "Quote",
+    "RequestId",
+    "SceneEvent",
+    "SceneId",
+    "SceneType",
+    "Segment",
+    "Text",
+    "UserId",
+    "Video",
+]

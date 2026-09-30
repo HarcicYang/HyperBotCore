@@ -1,11 +1,9 @@
 # 本地配置与脚本
 /config.json
+/appconfig.json
 /milky_config.json
 /logic.py
 /tracer.py
-
-# 锁文件（本项目选择不追踪）
-/uv.lock
 
 # 虚拟环境
 .venv/

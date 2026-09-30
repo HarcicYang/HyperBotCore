@@ -1,11 +1,69 @@
-name: HypeR Core PyPi Upload
+name: PyPI Upload
 
 on:
   release:
-    types: [ created ]
+    types: [created]
 
 jobs:
-  deploy:
+  check-versions:
+    runs-on: ubuntu-latest
+
+    outputs:
+      core_version: ${{ steps.versions.outputs.core_version }}
+      adapter_version: ${{ steps.versions.outputs.adapter_version }}
+      publish_core: ${{ steps.versions.outputs.publish_core }}
+      publish_adapter: ${{ steps.versions.outputs.publish_adapter }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11.11'
+
+      - name: Check PyPI versions
+        id: versions
+        shell: python
+        run: |
+          import json
+          import os
+          import tomllib
+          import urllib.error
+          import urllib.request
+          from pathlib import Path
+
+          def read_version(path: Path) -> str:
+              with path.open("rb") as file:
+                  return tomllib.load(file)["project"]["version"]
+
+          def version_exists(package: str, version: str) -> bool:
+              request = urllib.request.Request(
+                  f"https://pypi.org/pypi/{package}/json",
+                  headers={"User-Agent": "hyperot-pypi-upload"},
+              )
+              try:
+                  with urllib.request.urlopen(request, timeout=30) as response:
+                      releases = json.load(response)["releases"]
+              except urllib.error.HTTPError as exc:
+                  if exc.code == 404:
+                      return False
+                  raise
+              return version in releases
+
+          core_version = read_version(Path("pyproject.toml"))
+          adapter_version = read_version(Path("adapters/onebot/pyproject.toml"))
+          publish_core = not version_exists("hyper-bot", core_version)
+          publish_adapter = not version_exists("hyperot-adapter-onebot", adapter_version)
+
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
+              output.write(f"core_version={core_version}\n")
+              output.write(f"adapter_version={adapter_version}\n")
+              output.write(f"publish_core={str(publish_core).lower()}\n")
+              output.write(f"publish_adapter={str(publish_adapter).lower()}\n")
+
+  publish-core:
+    needs: check-versions
+    if: needs.check-versions.outputs.publish_core == 'true'
     runs-on: ubuntu-latest
 
     permissions:
@@ -23,8 +81,38 @@ jobs:
         with:
           python-version: '3.11.11'
 
-      - name: Build package
-        run: uv build
+      - name: Build core package
+        run: uv build --package hyper-bot --out-dir dist/core
 
-      - name: Publish package to PyPI
+      - name: Publish core package to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/core
+
+  publish-adapter:
+    needs: check-versions
+    if: needs.check-versions.outputs.publish_adapter == 'true'
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11.11'
+
+      - name: Build adapter package
+        run: uv build --package hyperot-adapter-onebot --out-dir dist/adapter
+
+      - name: Publish adapter package to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/adapter

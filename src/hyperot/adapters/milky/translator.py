@@ -112,9 +112,9 @@ def message_translator(milky_message: list[dict], peer_id: int, scene: int = 0) 
             case "xml":
                 builder.json({"service_id": seg_data.get("service_id", 0), "payload": seg_data.get("xml_payload", "")})
             case "file":
-                logger.debug(f"忽略不支持的文件消息段：{seg_data}")
+                logger.trace(f"忽略不支持的文件消息段：{seg_data}")
             case _:
-                logger.debug(f"忽略未知消息段：{seg_type}")
+                logger.trace(f"忽略未知消息段：{seg_type}")
 
     return builder.build()
 
@@ -253,7 +253,7 @@ class MilkyHttpConnection(WebsocketConnection):
                         .build()
                     )
                 if scene == "temp":
-                    logger.debug(f"临时会话消息按私聊消息处理：{milky_data}")
+                    logger.trace(f"临时会话消息按私聊消息处理：{milky_data}")
                     return (
                         builder.init(milky_time, milky_self_id, milky_data["sender_id"], 0)
                         .as_private_message(
@@ -263,7 +263,7 @@ class MilkyHttpConnection(WebsocketConnection):
                         .private_sender("", "unknown", 0)
                         .build()
                     )
-                logger.debug(f"忽略未知消息场景：{scene}")
+                logger.trace(f"忽略未知消息场景：{scene}")
                 return None
             case "bot_offline":
                 return (
@@ -407,7 +407,7 @@ class MilkyHttpConnection(WebsocketConnection):
                     .build()
                 )
             case _:
-                logger.debug(f"忽略未知事件类型：{milky_event_type}")
+                logger.trace(f"忽略未知事件类型：{milky_event_type}")
                 return None
 
     async def http_send(self, endpoint: str, data: dict) -> dict:
