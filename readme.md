@@ -30,7 +30,7 @@ pip install hyper-bot
 开发和构建使用 [uv](https://docs.astral.sh/uv/)：
 
 ```shell
-git clone https://github.com/HarcicYang/HypeR_Bot
+git clone https://github.com/HarcicYang/HyperBotCore
 cd HyperBotCore
 uv sync
 ```
