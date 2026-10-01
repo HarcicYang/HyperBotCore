@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any, ClassVar, Protocol, TypeVar
 
+from pydantic import JsonValue
 from typing_extensions import override
 
 from hyperot.v2.actions import (
@@ -32,6 +34,8 @@ from hyperot.v2.actions import (
     LeaveGroupAction,
     MuteMemberAction,
     PokeAction,
+    RawAction,
+    RawResult,
     ReactMessageAction,
     RecallMessageAction,
     RejectFriendRequestAction,
@@ -57,7 +61,6 @@ from hyperot.v2.actions.formatting import (
 from hyperot.v2.adapter import ActionRegistry
 from hyperot.v2.common import (
     ActionRejectedError,
-    CapabilityNotSupportedError,
     FileId,
     GroupId,
     MemberRole,
@@ -100,7 +103,7 @@ ONEBOT_ENDPOINTS = frozenset(
         "get_group_member_list",
         "get_status",
         "get_version_info",
-        "get_cookie",
+        "get_cookies",
         "get_csrf_token",
         "group_reaction",
         "upload_group_file",
@@ -113,6 +116,24 @@ ONEBOT_ENDPOINTS = frozenset(
 
 class ActionTransport(Protocol):
     async def call(self, action: str, params: dict[str, Any], timeout: float) -> dict[str, Any]: ...
+
+
+MessageGroupLookup = Callable[[MessageId], GroupId | None]
+MessageGroupRemember = Callable[[MessageId, GroupId], None]
+RequestSubtypeLookup = Callable[[str], str | None]
+FileContextLookup = Callable[[FileId], dict[str, JsonValue] | None]
+
+
+class OneBotKickMemberAction(KickMemberAction):
+    reject_add_request: bool = False
+
+
+class OneBotSetMemberTitleAction(SetMemberTitleAction):
+    duration: int = -1
+
+
+class OneBotLeaveGroupAction(LeaveGroupAction):
+    is_dismiss: bool = False
 
 
 class SendPrivateMessageAction(Action[SendResult]):
@@ -143,6 +164,7 @@ class GetForwardMessageAction(Action[Message]):
 
 
 class GroupReactionAction(Action[None]):
+    group_id: GroupId
     message_id: MessageId
     reaction: str
     enabled: bool = True
@@ -199,12 +221,27 @@ class GetPrivateFileUrlAction(Action[FileUrl]):
 
 
 class OneBotActions:
-    def __init__(self, transport: ActionTransport, codec: OneBotSegmentCodec, action_timeout: float) -> None:
+    def __init__(
+        self,
+        transport: ActionTransport,
+        codec: OneBotSegmentCodec,
+        action_timeout: float,
+        *,
+        message_group_lookup: MessageGroupLookup | None = None,
+        message_group_remember: MessageGroupRemember | None = None,
+        request_subtype_lookup: RequestSubtypeLookup | None = None,
+        file_context_lookup: FileContextLookup | None = None,
+    ) -> None:
         self.transport = transport
         self.codec = codec
         self.action_timeout = action_timeout
+        self.message_group_lookup = message_group_lookup
+        self.message_group_remember = message_group_remember
+        self.request_subtype_lookup = request_subtype_lookup
+        self.file_context_lookup = file_context_lookup
 
     def register_all(self, registry: ActionRegistry) -> None:
+        registry.register(RawAction, self.raw)
         registry.register(SendMessageAction, self.send_message)
         registry.register(SendPrivateMessageAction, self.send_private_message)
         registry.register(SendGroupMessageAction, self.send_group_message)
@@ -221,14 +258,17 @@ class OneBotActions:
         registry.register(GetGroupMemberAction, self.get_group_member)
         registry.register(GetGroupMemberListAction, self.get_group_member_list)
         registry.register(KickMemberAction, self.kick_member)
+        registry.register(OneBotKickMemberAction, self.kick_member)
         registry.register(MuteMemberAction, self.mute_member)
         registry.register(UnmuteMemberAction, self.unmute_member)
         registry.register(SetMemberRoleAction, self.set_member_role)
         registry.register(SetMemberTitleAction, self.set_member_title)
+        registry.register(OneBotSetMemberTitleAction, self.set_member_title)
         registry.register(SetMemberCardAction, self.set_member_card)
         registry.register(SetGroupNameAction, self.set_group_name)
         registry.register(SetGroupMuteAction, self.set_group_mute)
         registry.register(LeaveGroupAction, self.leave_group)
+        registry.register(OneBotLeaveGroupAction, self.leave_group)
         registry.register(ReactMessageAction, self.react_message)
         registry.register(SetEssenceAction, self.set_essence)
         registry.register(PokeAction, self.poke)
@@ -245,12 +285,20 @@ class OneBotActions:
         registry.register(GetPrivateFileUrlAction, self.get_private_file_url)
         registry.register(GroupReactionAction, self.group_reaction)
 
-    async def _call(self, endpoint: str, params: dict[str, Any]) -> dict[str, Any]:
+    async def raw(self, action: RawAction) -> RawResult:
+        data = await self._call_raw(action.action, dict(action.params))
+        return RawResult(data=data)
+
+    async def _call_raw(self, endpoint: str, params: dict[str, Any]) -> JsonValue:
         response = await self.transport.call(endpoint, params, self.action_timeout)
+        status = response.get("status")
         retcode = int(response.get("retcode", 0))
-        if retcode not in {0, 1}:
+        if status not in {None, "ok", "async"} or retcode not in {0, 1}:
             raise ActionRejectedError(f"{endpoint} failed with retcode={retcode}: {response.get('message', '')}")
-        data = response.get("data")
+        return response.get("data")
+
+    async def _call(self, endpoint: str, params: dict[str, Any]) -> dict[str, Any]:
+        data = await self._call_raw(endpoint, params)
         if data is None:
             return {}
         if not isinstance(data, dict):
@@ -264,7 +312,10 @@ class OneBotActions:
         else:
             params["user_id"] = str(action.scene_id)
         data = await self._call("send_msg", params)
-        return SendResult(message_id=MessageId(str(data["message_id"])))
+        message_id = MessageId(str(data["message_id"]))
+        if action.scene_type == SceneType.GROUP and self.message_group_remember is not None:
+            self.message_group_remember(message_id, GroupId(str(action.scene_id)))
+        return SendResult(message_id=message_id)
 
     async def send_private_message(self, action: SendPrivateMessageAction) -> SendResult:
         data = await self._call(
@@ -278,7 +329,10 @@ class OneBotActions:
             "send_group_msg",
             {"group_id": str(action.group_id), "message": self.codec.encode_message(action.message)},
         )
-        return SendResult(message_id=MessageId(str(data["message_id"])))
+        message_id = MessageId(str(data["message_id"]))
+        if self.message_group_remember is not None:
+            self.message_group_remember(message_id, action.group_id)
+        return SendResult(message_id=message_id)
 
     async def recall_message(self, action: RecallMessageAction) -> None:
         await self._call("delete_msg", {"message_id": str(action.message_id)})
@@ -404,7 +458,10 @@ class OneBotActions:
         ]
 
     async def kick_member(self, action: KickMemberAction) -> None:
-        await self._call("set_group_kick", {"group_id": str(action.group_id), "user_id": str(action.user_id)})
+        params: dict[str, Any] = {"group_id": str(action.group_id), "user_id": str(action.user_id)}
+        if isinstance(action, OneBotKickMemberAction):
+            params["reject_add_request"] = action.reject_add_request
+        await self._call("set_group_kick", params)
 
     async def mute_member(self, action: MuteMemberAction) -> None:
         await self._call(
@@ -429,10 +486,14 @@ class OneBotActions:
         )
 
     async def set_member_title(self, action: SetMemberTitleAction) -> None:
-        await self._call(
-            "set_group_special_title",
-            {"group_id": str(action.group_id), "user_id": str(action.user_id), "special_title": action.title},
-        )
+        params: dict[str, Any] = {
+            "group_id": str(action.group_id),
+            "user_id": str(action.user_id),
+            "special_title": action.title,
+        }
+        if isinstance(action, OneBotSetMemberTitleAction):
+            params["duration"] = action.duration
+        await self._call("set_group_special_title", params)
 
     async def set_member_card(self, action: SetMemberCardAction) -> None:
         await self._call(
@@ -447,20 +508,41 @@ class OneBotActions:
         await self._call("set_group_whole_ban", {"group_id": str(action.group_id), "enable": action.muted})
 
     async def leave_group(self, action: LeaveGroupAction) -> None:
-        await self._call("set_group_leave", {"group_id": str(action.group_id)})
+        params: dict[str, Any] = {"group_id": str(action.group_id)}
+        if isinstance(action, OneBotLeaveGroupAction):
+            params["is_dismiss"] = action.is_dismiss
+        await self._call("set_group_leave", params)
 
     async def react_message(self, action: ReactMessageAction) -> None:
-        if not action.enabled and action.reaction.lstrip("-").isdigit() is False:
-            raise CapabilityNotSupportedError("OneBot reaction removal is not supported")
-        await self._call(
-            "group_reaction",
-            {"message_id": str(action.message_id), "code": action.reaction},
-        )
+        if self.message_group_lookup is None:
+            raise ActionRejectedError("OneBot reaction requires message context")
+        group_id = self.message_group_lookup(action.message_id)
+        if group_id is None:
+            raise ActionRejectedError(f"OneBot reaction requires group context for message {action.message_id}")
+        await self._send_group_reaction(group_id, action.message_id, action.reaction, action.enabled)
 
     async def group_reaction(self, action: GroupReactionAction) -> None:
+        await self._send_group_reaction(action.group_id, action.message_id, action.reaction, action.enabled)
+
+    async def _send_group_reaction(
+        self,
+        group_id: GroupId,
+        message_id: MessageId,
+        reaction: str,
+        enabled: bool,
+    ) -> None:
+        params: dict[str, Any] = {
+            "group_id": str(group_id),
+            "message_id": str(message_id),
+            "is_add": enabled,
+        }
+        if reaction.lstrip("-").isdigit():
+            params["code"] = int(reaction)
+        else:
+            params["emoji"] = reaction
         await self._call(
             "group_reaction",
-            {"message_id": str(action.message_id), "code": action.reaction},
+            params,
         )
 
     async def set_essence(self, action: SetEssenceAction) -> None:
@@ -477,7 +559,7 @@ class OneBotActions:
         await self._call("send_like", {"user_id": str(action.user_id), "times": action.times})
 
     async def get_cookie(self, action: GetCookieAction) -> CookieInfo:
-        data = await self._call("get_cookie", {"domain": action.domain})
+        data = await self._call("get_cookies", {"domain": action.domain})
         return CookieInfo(cookies=str(data.get("cookies", "")))
 
     async def get_csrf_token(self, _action: GetCsrfTokenAction) -> CsrfTokenInfo:
@@ -494,17 +576,19 @@ class OneBotActions:
         )
 
     async def approve_group_request(self, action: ApproveGroupRequestAction) -> None:
+        sub_type = self._request_subtype(str(action.request_id))
         await self._call(
             "set_group_add_request",
-            {"flag": str(action.request_id), "sub_type": "add", "approve": True},
+            {"flag": str(action.request_id), "sub_type": sub_type, "approve": True},
         )
 
     async def reject_group_request(self, action: RejectGroupRequestAction) -> None:
+        sub_type = self._request_subtype(str(action.request_id))
         await self._call(
             "set_group_add_request",
             {
                 "flag": str(action.request_id),
-                "sub_type": "add",
+                "sub_type": sub_type,
                 "approve": False,
                 "reason": action.reason or "",
             },
@@ -525,17 +609,33 @@ class OneBotActions:
         await self._call("upload_private_file", params)
 
     async def get_group_file_url(self, action: GetGroupFileUrlAction) -> FileUrl:
-        data = await self._call(
-            "get_group_file_url", {"group_id": str(action.group_id), "file_id": str(action.file_id)}
-        )
+        context = self.file_context_lookup(action.file_id) if self.file_context_lookup is not None else None
+        params: dict[str, Any] = {"group_id": str(action.group_id), "file_id": str(action.file_id)}
+        if context is not None and "busid" in context:
+            params["busid"] = context["busid"]
+        data = await self._call("get_group_file_url", params)
         return FileUrl(url=str(data.get("url", "")))
 
     async def get_private_file_url(self, action: GetPrivateFileUrlAction) -> FileUrl:
         params = {"user_id": str(action.user_id), "file_id": str(action.file_id)}
-        if action.file_hash:
-            params["file_hash"] = action.file_hash
+        file_hash = action.file_hash
+        if file_hash is None and self.file_context_lookup is not None:
+            context = self.file_context_lookup(action.file_id)
+            if context is not None and context.get("file_hash"):
+                file_hash = str(context["file_hash"])
+        if not file_hash:
+            raise ActionRejectedError(f"OneBot private file URL requires file_hash for {action.file_id}")
+        params["file_hash"] = file_hash
         data = await self._call("get_private_file_url", params)
         return FileUrl(url=str(data.get("url", "")))
+
+    def _request_subtype(self, request_id: str) -> str:
+        if self.request_subtype_lookup is None:
+            return "add"
+        sub_type = self.request_subtype_lookup(request_id)
+        if sub_type not in {"add", "invite"}:
+            raise ActionRejectedError(f"OneBot group request subtype is unknown: {request_id}")
+        return sub_type
 
 
 def _member_role(value: object) -> MemberRole | None:

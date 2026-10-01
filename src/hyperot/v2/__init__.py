@@ -33,6 +33,7 @@ from .messages import (
     Quote,
     Segment,
     Text,
+    UnknownSegment,
     Video,
 )
 
@@ -68,6 +69,7 @@ __all__ = [
     "SceneType",
     "Segment",
     "Text",
+    "UnknownSegment",
     "UserId",
     "Video",
 ]

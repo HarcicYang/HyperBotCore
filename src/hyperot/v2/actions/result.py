@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, JsonValue
 from typing_extensions import override
 
 from ..common import FileId, GroupId, MemberRole, MessageId, UserId
@@ -139,6 +139,14 @@ class CsrfTokenInfo(ResultModel):
     @override
     def log_summary(self) -> str:
         return "csrf token"
+
+
+class RawResult(ResultModel):
+    data: JsonValue = None
+
+    @override
+    def log_summary(self) -> str:
+        return f"raw {type(self.data).__name__}"
 
 
 class FileReference(ResultModel):

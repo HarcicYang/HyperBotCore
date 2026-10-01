@@ -1,5 +1,6 @@
 from typing import ClassVar
 
+from pydantic import Field, JsonValue
 from typing_extensions import override
 
 from ..common import FileId, GroupId, MemberRole, MessageId, RequestId, SceneId, SceneType, UserId
@@ -16,10 +17,23 @@ from .result import (
     FriendInfo,
     GroupMemberProfile,
     GroupProfile,
+    RawResult,
     SendResult,
     UserProfile,
     VersionInfo,
 )
+
+
+class RawAction(Action[RawResult]):
+    log_level: ClassVar[str] = "TRACE"
+
+    action: str
+    params: dict[str, JsonValue] = Field(default_factory=dict)
+
+    @override
+    def log_summary(self) -> str:
+        keys = ", ".join(sorted(self.params)) if self.params else "<none>"
+        return f"raw {format_text(self.action)} ({keys})"
 
 
 class SendMessageAction(Action[SendResult]):

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 
-from pydantic import BaseModel, ConfigDict, SerializeAsAny, field_validator
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, SerializeAsAny, field_validator
 from typing_extensions import override
 
 from ..common import FileId, MessageId, UserId
@@ -20,6 +20,15 @@ class Segment(BaseModel):
 
     def display_text(self) -> str:
         return f"[{type(self).__name__}]"
+
+
+class UnknownSegment(Segment):
+    wire_type: str
+    data: dict[str, JsonValue] = Field(default_factory=dict)
+
+    @override
+    def display_text(self) -> str:
+        return f"[unknown:{self.wire_type}]"
 
 
 class Text(Segment):

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any, ClassVar
 
@@ -40,13 +41,21 @@ from hyperot.v2.events import (
     PokeReceivedEvent,
     SceneEvent,
 )
+from hyperot.v2.hyperogger import Logger
 from hyperot.v2.messages import Mention, MentionAll, Message
 
 from .segments import OneBotSegmentCodec
 
+logger = Logger.fetch("hyperot.v2.events")
+MessageGroupLookup = Callable[[MessageId], GroupId | None]
+
 
 def _id(value: object) -> str:
     return str(value)
+
+
+def _has_group(value: object) -> bool:
+    return value not in (None, 0, "0", "")
 
 
 def _timestamp(value: object) -> datetime:
@@ -160,7 +169,22 @@ class OneBotHeartbeatEvent(Event):
     status: OneBotHeartbeatStatus
 
 
-def translate_event(data: dict[str, Any], codec: OneBotSegmentCodec) -> Event | None:
+class OneBotReactionEvent(Event):
+    log_enabled: ClassVar[bool] = False
+
+    message_id: MessageId
+    operator_id: UserId
+    reaction: ReactionValue
+    added: bool
+    count: int | None = None
+    group_id: GroupId | None = None
+
+
+def translate_event(
+    data: dict[str, Any],
+    codec: OneBotSegmentCodec,
+    message_group_lookup: MessageGroupLookup | None = None,
+) -> Event | None:
     post_type = data.get("post_type")
     if post_type == "meta_event":
         timestamp = _timestamp(data.get("time"))
@@ -185,7 +209,11 @@ def translate_event(data: dict[str, Any], codec: OneBotSegmentCodec) -> Event | 
         scene_id = SceneId(_id(data.get("user_id") if scene_type == SceneType.USER else data.get("group_id")))
         user_id = UserId(_id(data.get("user_id", 0)))
         self_id = UserId(_id(data.get("self_id", 0)))
-        message = codec.decode_message(data.get("message", []))
+        message_payload = data.get("message", [])
+        if not isinstance(message_payload, list):
+            logger.warning("OneBot message event rejected: message must be an array")
+            return None
+        message = codec.decode_message(message_payload)
         sender_data = data.get("sender") or {}
         anonymous_data = data.get("anonymous")
         return OneBotMessageReceivedEvent(
@@ -223,7 +251,7 @@ def translate_event(data: dict[str, Any], codec: OneBotSegmentCodec) -> Event | 
         )
 
     if post_type == "notice":
-        return _translate_notice(data)
+        return _translate_notice(data, message_group_lookup)
 
     if post_type == "request":
         return _translate_request(data)
@@ -231,7 +259,10 @@ def translate_event(data: dict[str, Any], codec: OneBotSegmentCodec) -> Event | 
     return None
 
 
-def _translate_notice(data: dict[str, Any]) -> Event | None:
+def _translate_notice(
+    data: dict[str, Any],
+    message_group_lookup: MessageGroupLookup | None = None,
+) -> Event | None:
     notice_type = data.get("notice_type")
     timestamp = _timestamp(data.get("time"))
     user_id = UserId(_id(data.get("user_id", 0)))
@@ -339,6 +370,16 @@ def _translate_notice(data: dict[str, Any]) -> Event | None:
         )
 
     if notice_type == "notify" and data.get("sub_type") == "poke":
+        if not _has_group(data.get("group_id")):
+            return OneBotPokeReceivedEvent(
+                timestamp=timestamp,
+                scene_type=SceneType.USER,
+                scene_id=SceneId(str(user_id)),
+                user_id=user_id,
+                target_id=UserId(_id(data.get("target_id", 0))),
+                poke_type=data.get("type"),
+                poke_id=data.get("id"),
+            )
         return OneBotPokeReceivedEvent(
             **scene,
             target_id=UserId(_id(data.get("target_id", 0))),
@@ -368,15 +409,35 @@ def _translate_notice(data: dict[str, Any]) -> Event | None:
             added=data.get("sub_type") == "add",
         )
 
-    if notice_type == "reaction":
+    if notice_type in {"reaction", "group_msg_emoji_like"}:
         reaction_type = data.get("reaction_type")
-        reaction_kind = ReactionKind.EMOJI if reaction_type == "emoji" else ReactionKind.FACE
+        code = str(data.get("code", ""))
+        reaction_kind = (
+            ReactionKind.EMOJI if reaction_type == "emoji" or not code.lstrip("-").isdigit() else ReactionKind.FACE
+        )
+        message_id = MessageId(_id(data.get("message_id", "")))
+        group_id = data.get("group_id")
+        if not _has_group(group_id) and message_group_lookup is not None:
+            group_id = message_group_lookup(message_id)
+        if not _has_group(group_id):
+            logger.warning(f"OneBot reaction event could not resolve group context: message_id={message_id}")
+            return OneBotReactionEvent(
+                timestamp=timestamp,
+                message_id=message_id,
+                operator_id=UserId(_id(data.get("operator_id") or data.get("user_id", 0))),
+                reaction=ReactionValue(kind=reaction_kind, value=code),
+                added=data.get("sub_type") == "add",
+                count=int(data["count"]) if data.get("count") is not None else None,
+            )
         return MessageReactionChangedEvent(
-            **scene,
-            message_id=MessageId(_id(data.get("message_id", ""))),
+            timestamp=timestamp,
+            scene_type=SceneType.GROUP,
+            scene_id=SceneId(str(group_id)),
+            user_id=UserId(_id(data.get("operator_id") or data.get("user_id", 0))),
+            message_id=message_id,
             reaction=ReactionValue(
                 kind=reaction_kind,
-                value=str(data.get("code", "")),
+                value=code,
             ),
             added=data.get("sub_type") == "add",
             count=int(data["count"]) if data.get("count") is not None else None,

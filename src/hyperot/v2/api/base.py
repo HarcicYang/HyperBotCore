@@ -1,4 +1,7 @@
+from collections.abc import Mapping
 from dataclasses import dataclass
+
+from pydantic import JsonValue
 
 from ..actions import (
     ApproveFriendRequestAction,
@@ -23,6 +26,8 @@ from ..actions import (
     LeaveGroupAction,
     MuteMemberAction,
     PokeAction,
+    RawAction,
+    RawResult,
     ReactMessageAction,
     RecallMessageAction,
     RejectFriendRequestAction,
@@ -289,6 +294,9 @@ class ClientAPI:
 
     def file(self, file_id: FileId) -> FileAPI:
         return FileAPI(self._context, file_id)
+
+    async def raw(self, action: str, params: Mapping[str, JsonValue] | None = None) -> RawResult:
+        return await self._context.execute(RawAction(action=action, params=dict(params or {})))
 
     @property
     def bot(self) -> BotAPI:

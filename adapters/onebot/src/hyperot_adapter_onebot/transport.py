@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import hmac
 import json
 import uuid
 from contextlib import suppress
@@ -8,12 +10,17 @@ from typing import Any, Protocol, cast
 
 import httpx
 import uvicorn
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect
 from typing_extensions import override
 from websockets.asyncio.client import ClientConnection
 from websockets.asyncio.client import connect as ws_connect
 
-from hyperot.v2.common import ActionTimeoutError, AdapterConnectionError, AdapterDisconnectedError
+from hyperot.v2.common import (
+    ActionRejectedError,
+    ActionTimeoutError,
+    AdapterConnectionError,
+    AdapterDisconnectedError,
+)
 
 from .config import (
     ForwardWebSocketConfig,
@@ -89,6 +96,8 @@ class ForwardWebSocketTransport(_PendingMixin):
         if self._ws is not None:
             await self._ws.close()
             self._ws = None
+        while not self._events.empty():
+            self._events.get_nowait()
         self._fail_pending(AdapterDisconnectedError("OneBot websocket closed"))
 
     async def receive(self) -> dict[str, Any]:
@@ -143,11 +152,26 @@ class HTTPTransport:
         raise AssertionError("unreachable")
 
     async def call(self, action: str, params: dict[str, Any], timeout: float) -> dict[str, Any]:
+        headers = {"Authorization": f"Bearer {self.config.access_token}"} if self.config.access_token else None
         try:
-            response = await self._client.post(f"{self.config.url.rstrip('/')}/{action}", json=params, timeout=timeout)
+            response = await self._client.post(
+                f"{self.config.url.rstrip('/')}/{action}",
+                json=params,
+                headers=headers,
+                timeout=timeout,
+            )
         except httpx.HTTPError as exc:
             raise AdapterConnectionError(str(exc)) from exc
-        return response.json()
+        try:
+            data = response.json()
+        except ValueError as exc:
+            raise AdapterConnectionError(f"OneBot HTTP returned non-JSON response: {response.status_code}") from exc
+        if response.status_code >= 400:
+            retcode = data.get("retcode", response.status_code) if isinstance(data, dict) else response.status_code
+            raise ActionRejectedError(f"{action} failed with HTTP {response.status_code} retcode={retcode}")
+        if not isinstance(data, dict):
+            raise AdapterConnectionError(f"OneBot HTTP returned invalid response: {type(data).__name__}")
+        return data
 
 
 class _ServerTransport:
@@ -190,12 +214,23 @@ class HTTPPostTransport(_ServerTransport):
         self.config = config
         self.app = FastAPI()
 
-        @self.app.post(config.endpoint)
-        async def receive(request: Request) -> dict[str, bool]:
-            data = await request.json()
+        @self.app.post(config.endpoint, status_code=204)
+        async def receive(request: Request) -> Response:
+            body = await request.body()
+            if self.config.secret:
+                signature = request.headers.get("X-Signature")
+                if not signature:
+                    return Response(status_code=401)
+                expected = hmac.new(self.config.secret.encode(), body, hashlib.sha1).hexdigest()
+                if not hmac.compare_digest(signature, f"sha1={expected}"):
+                    return Response(status_code=403)
+            try:
+                data = json.loads(body)
+            except ValueError:
+                return Response(status_code=400)
             if isinstance(data, dict):
                 await self.events.put(data)
-            return {"ok": True}
+            return Response(status_code=204)
 
     async def start(self) -> None:
         await self._start_server(self.app)
@@ -213,28 +248,37 @@ class ReverseWebSocketTransport(_PendingMixin, _ServerTransport):
         self._api_ws: WebSocket | None = None
         self._api_task: asyncio.Task[None] | None = None
 
+        @self.app.websocket("/")
+        async def root_endpoint(websocket: WebSocket) -> None:
+            role = websocket.headers.get("X-Client-Role")
+            if role == "API":
+                await self._run_api(websocket)
+            elif role == "Event":
+                await self._run_event(websocket)
+            elif role == "Universal":
+                await self._run_universal(websocket)
+            else:
+                await websocket.close(code=1008)
+
         @self.app.websocket(config.api_path)
         async def api_endpoint(websocket: WebSocket) -> None:
-            await websocket.accept()
-            self._api_ws = websocket
-            self._api_task = asyncio.create_task(self._api_reader(websocket))
-            try:
-                await self._api_task
-            except WebSocketDisconnect:
-                pass
-            finally:
-                self._api_ws = None
+            role = websocket.headers.get("X-Client-Role")
+            if role == "Universal":
+                await self._run_universal(websocket)
+            elif role == "Event":
+                await self._run_event(websocket)
+            else:
+                await self._run_api(websocket)
 
         @self.app.websocket(config.event_path)
         async def event_endpoint(websocket: WebSocket) -> None:
-            await websocket.accept()
-            try:
-                while True:
-                    data = json.loads(await websocket.receive_text())
-                    if isinstance(data, dict):
-                        await self.events.put(data)
-            except WebSocketDisconnect:
-                return
+            role = websocket.headers.get("X-Client-Role")
+            if role == "Universal":
+                await self._run_universal(websocket)
+            elif role == "API":
+                await self._run_api(websocket)
+            else:
+                await self._run_event(websocket)
 
     async def start(self) -> None:
         await self._start_server(self.app)
@@ -247,6 +291,7 @@ class ReverseWebSocketTransport(_PendingMixin, _ServerTransport):
                 await self._api_task
         if self._api_ws is not None:
             await self._api_ws.close()
+            self._api_ws = None
         self._fail_pending(AdapterDisconnectedError("OneBot reverse websocket closed"))
         await super().stop()
 
@@ -263,6 +308,74 @@ class ReverseWebSocketTransport(_PendingMixin, _ServerTransport):
             self._pending.pop(echo, None)
             raise ActionTimeoutError(f"OneBot action timed out: {action}") from exc
 
+    def _authorized(self, websocket: WebSocket) -> bool:
+        if not self.config.access_token:
+            return True
+        return (
+            websocket.headers.get("authorization") == f"Bearer {self.config.access_token}"
+            or websocket.query_params.get("access_token") == self.config.access_token
+        )
+
+    async def _run_api(self, websocket: WebSocket) -> None:
+        if not self._authorized(websocket):
+            await websocket.close(code=1008)
+            return
+        await websocket.accept()
+        old = self._api_ws
+        if old is not None and old is not websocket:
+            with suppress(Exception):
+                await old.close()
+        self._api_ws = websocket
+        task = asyncio.create_task(self._api_reader(websocket))
+        self._api_task = task
+        try:
+            await task
+        except Exception as exc:  # noqa: BLE001
+            self._fail_pending(AdapterDisconnectedError(str(exc)))
+        finally:
+            if self._api_ws is websocket:
+                self._api_ws = None
+            if self._api_task is task:
+                self._api_task = None
+            self._fail_pending(AdapterDisconnectedError("OneBot reverse API websocket closed"))
+
+    async def _run_event(self, websocket: WebSocket) -> None:
+        if not self._authorized(websocket):
+            await websocket.close(code=1008)
+            return
+        await websocket.accept()
+        try:
+            while True:
+                data = json.loads(await websocket.receive_text())
+                if isinstance(data, dict):
+                    await self.events.put(data)
+        except (WebSocketDisconnect, ValueError):
+            return
+
+    async def _run_universal(self, websocket: WebSocket) -> None:
+        if not self._authorized(websocket):
+            await websocket.close(code=1008)
+            return
+        await websocket.accept()
+        old = self._api_ws
+        if old is not None and old is not websocket:
+            with suppress(Exception):
+                await old.close()
+        self._api_ws = websocket
+        try:
+            while True:
+                data = json.loads(await websocket.receive_text())
+                if not isinstance(data, dict):
+                    continue
+                if not self._resolve(data):
+                    await self.events.put(data)
+        except (WebSocketDisconnect, ValueError):
+            pass
+        finally:
+            if self._api_ws is websocket:
+                self._api_ws = None
+            self._fail_pending(AdapterDisconnectedError("OneBot reverse websocket closed"))
+
     async def _api_reader(self, websocket: WebSocket) -> None:
         try:
             while True:
@@ -271,6 +384,9 @@ class ReverseWebSocketTransport(_PendingMixin, _ServerTransport):
                     self._resolve(data)
         except WebSocketDisconnect:
             return
+        except Exception as exc:
+            self._fail_pending(AdapterDisconnectedError(str(exc)))
+            raise
 
 
 def build_transport(config: OneBotConnectionConfig) -> ActionTransport:

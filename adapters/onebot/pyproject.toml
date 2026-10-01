@@ -1,6 +1,6 @@
 [project]
 name = "hyperot-adapter-onebot"
-version = "2.0.0"
+version = "11.0"
 description = "OneBot v11 adapter for HyperBotCore V2"
 readme = "README.md"
 requires-python = ">=3.11"

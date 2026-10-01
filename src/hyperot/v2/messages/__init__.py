@@ -12,6 +12,7 @@ from .segments import (
     Quote,
     Segment,
     Text,
+    UnknownSegment,
     Video,
 )
 
@@ -29,5 +30,6 @@ __all__ = [
     "Quote",
     "Segment",
     "Text",
+    "UnknownSegment",
     "Video",
 ]

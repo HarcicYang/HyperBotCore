@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+from collections import OrderedDict
 from contextlib import suppress
 from typing import TypeVar
+
+from pydantic import JsonValue
 
 from hyperot.v2.actions import Action
 from hyperot.v2.adapter import (
@@ -11,13 +14,18 @@ from hyperot.v2.adapter import (
     ExtensionRegistry,
     load_manifest,
 )
-from hyperot.v2.events import Event
+from hyperot.v2.common import FileId, GroupId, MessageId, SceneType
+from hyperot.v2.events import Event, GroupInvitationReceivedEvent, GroupJoinRequestedEvent
 
 from .actions import OneBotActions
 from .api import OneBotAPI
 from .config import OneBotConfig
-from .events import translate_event
-from .segments import OneBotSegmentCodec
+from .events import (
+    OneBotFileUploadedEvent,
+    OneBotMessageReceivedEvent,
+    translate_event,
+)
+from .segments import OneBotFile, OneBotSegmentCodec
 from .transport import ActionTransport, HTTPPostTransport, build_transport
 
 ResultT = TypeVar("ResultT")
@@ -43,6 +51,9 @@ class OneBotAdapter:
         self._transports: list[ActionTransport] = []
         self._action_transport: ActionTransport | None = None
         self._running = False
+        self._message_groups: OrderedDict[str, GroupId] = OrderedDict()
+        self._request_subtypes: OrderedDict[str, str] = OrderedDict()
+        self._file_context: OrderedDict[str, dict[str, JsonValue]] = OrderedDict()
 
     async def start(self, config: OneBotConfig) -> None:
         if self._running:
@@ -71,6 +82,10 @@ class OneBotAdapter:
                 self._action_transport,
                 self.segment_codec,
                 config.action_timeout,
+                message_group_lookup=self._message_group_lookup,
+                message_group_remember=self._remember_message_group,
+                request_subtype_lookup=self._request_subtype_lookup,
+                file_context_lookup=self._file_context_lookup,
             )
             builder.register_all(self.actions)
         self._running = True
@@ -101,8 +116,9 @@ class OneBotAdapter:
                 if pending:
                     await asyncio.gather(*pending, return_exceptions=True)
                 payload = done.pop().result()
-            event = translate_event(payload, self.segment_codec)
+            event = translate_event(payload, self.segment_codec, self._message_group_lookup)
             if event is not None:
+                self._remember_event_context(event)
                 return event
 
     async def execute(self, action: Action[ResultT]) -> ResultT:
@@ -113,6 +129,64 @@ class OneBotAdapter:
         if self._action_transport is None:
             raise RuntimeError("OneBot adapter has no action transport")
         return self._action_transport
+
+    def _remember_message_group(self, message_id: MessageId, group_id: GroupId) -> None:
+        self._message_groups[str(message_id)] = group_id
+        self._message_groups.move_to_end(str(message_id))
+        while len(self._message_groups) > 8192:
+            self._message_groups.popitem(last=False)
+
+    def _message_group_lookup(self, message_id: MessageId) -> GroupId | None:
+        group_id = self._message_groups.get(str(message_id))
+        if group_id is not None:
+            self._message_groups.move_to_end(str(message_id))
+        return group_id
+
+    def _remember_request_subtype(self, request_id: str, sub_type: str) -> None:
+        self._request_subtypes[request_id] = sub_type
+        self._request_subtypes.move_to_end(request_id)
+        while len(self._request_subtypes) > 1024:
+            self._request_subtypes.popitem(last=False)
+
+    def _request_subtype_lookup(self, request_id: str) -> str | None:
+        sub_type = self._request_subtypes.get(request_id)
+        if sub_type is not None:
+            self._request_subtypes.move_to_end(request_id)
+        return sub_type
+
+    def _remember_file_context(self, file_id: FileId, **values: JsonValue) -> None:
+        key = str(file_id)
+        context = self._file_context.setdefault(key, {})
+        context.update({name: value for name, value in values.items() if value is not None})
+        self._file_context.move_to_end(key)
+        while len(self._file_context) > 4096:
+            self._file_context.popitem(last=False)
+
+    def _file_context_lookup(self, file_id: FileId) -> dict[str, JsonValue] | None:
+        context = self._file_context.get(str(file_id))
+        if context is not None:
+            self._file_context.move_to_end(str(file_id))
+            return dict(context)
+        return None
+
+    def _remember_event_context(self, event: Event) -> None:
+        if isinstance(event, OneBotMessageReceivedEvent):
+            if event.scene_type == SceneType.GROUP:
+                self._remember_message_group(event.message_id, GroupId(str(event.scene_id)))
+            for segment in event.message:
+                if isinstance(segment, OneBotFile) and segment.file_id is not None:
+                    self._remember_file_context(segment.file_id, file_hash=segment.file_hash)
+        elif isinstance(event, OneBotFileUploadedEvent):
+            if str(event.file.file_id):
+                self._remember_file_context(
+                    event.file.file_id,
+                    busid=event.busid,
+                    file_hash=event.file_hash,
+                )
+        elif isinstance(event, GroupJoinRequestedEvent):
+            self._remember_request_subtype(str(event.request_id), "add")
+        elif isinstance(event, GroupInvitationReceivedEvent):
+            self._remember_request_subtype(str(event.request_id), "invite")
 
 
 def create_adapter() -> OneBotAdapter:

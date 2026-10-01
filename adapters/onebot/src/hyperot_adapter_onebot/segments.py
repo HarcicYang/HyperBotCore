@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 from typing_extensions import override
 
 from hyperot.v2.common import FileId, MessageId, UserId
@@ -21,6 +21,7 @@ from hyperot.v2.messages import (
     Quote,
     Segment,
     Text,
+    UnknownSegment,
     Video,
 )
 
@@ -202,7 +203,7 @@ WireSegmentUnion = Annotated[
     | GreyTipsWire,
     Field(discriminator="type"),
 ]
-WIRE_ADAPTER = TypeAdapter(list[WireSegmentUnion])
+WIRE_SEGMENT_ADAPTER = TypeAdapter(WireSegmentUnion)
 
 
 class OneBotText(Text):
@@ -531,12 +532,34 @@ def _from_wire(payload: WireSegmentUnion) -> Segment:
 
 class OneBotSegmentCodec:
     def decode_segments(self, payload: list[dict[str, Any]]) -> Message:
-        return Message(*[_from_wire(item) for item in WIRE_ADAPTER.validate_python(payload)])
+        segments: list[Segment] = []
+        for item in payload:
+            try:
+                wire = WIRE_SEGMENT_ADAPTER.validate_python(item)
+            except ValidationError:
+                wire_type = str(item.get("type", "unknown")) if isinstance(item, dict) else "unknown"
+                data = item.get("data", {}) if isinstance(item, dict) else {}
+                segments.append(
+                    UnknownSegment(
+                        wire_type=wire_type,
+                        data=data if isinstance(data, dict) else {},
+                    )
+                )
+                continue
+            segments.append(_from_wire(wire))
+        return Message(*segments)
 
     def encode_segments(self, message: Message) -> list[dict[str, Any]]:
-        return [item.model_dump(mode="json") for item in (_to_wire(segment) for segment in message)]
+        return [
+            {"type": segment.wire_type, "data": segment.data}
+            if isinstance(segment, UnknownSegment)
+            else _to_wire(segment).model_dump(mode="json")
+            for segment in message
+        ]
 
     def decode_message(self, payload: list[dict[str, Any]]) -> Message:
+        if not isinstance(payload, list):
+            raise TypeError("OneBot message must be an array")
         return self.decode_segments(payload)
 
     def encode_message(self, message: Message) -> list[dict[str, Any]]:

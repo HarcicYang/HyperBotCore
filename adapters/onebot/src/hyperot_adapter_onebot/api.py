@@ -2,14 +2,24 @@ from __future__ import annotations
 
 from typing_extensions import override
 
-from hyperot.v2.actions import CookieInfo, CsrfTokenInfo, FileUrl
+from hyperot.v2.actions import (
+    CookieInfo,
+    CsrfTokenInfo,
+    FileReference,
+    FileUrl,
+    MuteMemberAction,
+    ReactMessageAction,
+)
 from hyperot.v2.api import BotAPI, ClientAPI, FileAPI, GroupAPI, GroupMemberAPI, MessageAPI, UserAPI
-from hyperot.v2.common import FileId, GroupId, MessageId, SceneId, SceneType, UserId
+from hyperot.v2.common import CapabilityNotSupportedError, FileId, GroupId, MessageId, SceneId, SceneType, UserId
 
 from .actions import (
     GetGroupFileUrlAction,
     GetPrivateFileUrlAction,
     GroupReactionAction,
+    OneBotKickMemberAction,
+    OneBotLeaveGroupAction,
+    OneBotSetMemberTitleAction,
 )
 
 
@@ -22,6 +32,26 @@ class OneBotUserAPI(UserAPI):
 
 class OneBotGroupMemberAPI(GroupMemberAPI):
     @override
+    async def kick(self, reject_add_request: bool = False) -> None:
+        await self._context.execute(
+            OneBotKickMemberAction(
+                group_id=self.group_id,
+                user_id=self.user_id,
+                reject_add_request=reject_add_request,
+            )
+        )
+
+    @override
+    async def mute(self, duration: int = 1800) -> None:
+        await self._context.execute(
+            MuteMemberAction(
+                group_id=self.group_id,
+                user_id=self.user_id,
+                duration=duration,
+            )
+        )
+
+    @override
     async def set_card(self, card: str) -> None:
         from hyperot.v2.actions import SetMemberCardAction
 
@@ -30,6 +60,17 @@ class OneBotGroupMemberAPI(GroupMemberAPI):
                 group_id=self.group_id,
                 user_id=self.user_id,
                 card=card,
+            )
+        )
+
+    @override
+    async def set_title(self, title: str, duration: int = -1) -> None:
+        await self._context.execute(
+            OneBotSetMemberTitleAction(
+                group_id=self.group_id,
+                user_id=self.user_id,
+                title=title,
+                duration=duration,
             )
         )
 
@@ -42,9 +83,19 @@ class OneBotGroupAPI(GroupAPI):
     async def reaction(self, message_id: MessageId, reaction: str) -> None:
         await self._context.execute(
             GroupReactionAction(
+                group_id=self.group_id,
                 message_id=message_id,
                 reaction=reaction,
                 enabled=True,
+            )
+        )
+
+    @override
+    async def leave(self, is_dismiss: bool = False) -> None:
+        await self._context.execute(
+            OneBotLeaveGroupAction(
+                group_id=self.group_id,
+                is_dismiss=is_dismiss,
             )
         )
 
@@ -52,7 +103,7 @@ class OneBotGroupAPI(GroupAPI):
 class OneBotMessageAPI(MessageAPI):
     async def group_reaction(self, reaction: str) -> None:
         await self._context.execute(
-            GroupReactionAction(
+            ReactMessageAction(
                 message_id=self.message_id,
                 reaction=reaction,
                 enabled=True,
@@ -61,6 +112,14 @@ class OneBotMessageAPI(MessageAPI):
 
 
 class OneBotFileAPI(FileAPI):
+    @override
+    async def info(self) -> FileReference:
+        raise CapabilityNotSupportedError("OneBot has no generic file info endpoint")
+
+    @override
+    async def download(self) -> FileUrl:
+        raise CapabilityNotSupportedError("OneBot has no generic file download endpoint")
+
     async def group_url(self, group_id: GroupId) -> FileUrl:
         return await self._context.execute(
             GetGroupFileUrlAction(
