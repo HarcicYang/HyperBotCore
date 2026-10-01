@@ -5,7 +5,7 @@ from hyperot_adapter_onebot import OneBotConfig, create_adapter
 from websockets.asyncio.server import serve
 
 from hyperot.v2.actions import GetVersionAction, SendMessageAction, SendResult
-from hyperot.v2.common import GroupId, MessageId, SceneType
+from hyperot.v2.common import SceneType
 from hyperot.v2.messages import Message, Text
 
 
@@ -63,12 +63,12 @@ def test_forward_websocket_event_and_action_echo():
                 sent = await adapter.execute(
                     SendMessageAction(
                         scene_type=SceneType.GROUP,
-                        scene_id=GroupId("3"),
+                        scene_id="3",
                         message=Message(Text(text="hello")),
                     )
                 )
                 assert isinstance(sent, SendResult)
-                assert sent.message_id == MessageId("sent")
+                assert sent.message_id == "sent"
             finally:
                 await adapter.stop()
 

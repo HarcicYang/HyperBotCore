@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..common import EventId, SceneId, SceneType, UserId
+from ..common import SceneType
 from ..hyperogger import Logger
 
 logger = Logger.fetch("hyperot.v2.events")
@@ -20,7 +20,7 @@ class Event(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
 
     log_enabled: ClassVar[bool] = True
-    event_id: EventId = Field(default_factory=lambda: EventId(uuid4().hex))
+    event_id: str = Field(default_factory=lambda: uuid4().hex)
     timestamp: datetime = Field(default_factory=utc_now)
 
     def print_log(self) -> None:
@@ -37,5 +37,5 @@ class Event(BaseModel):
 
 class SceneEvent(Event):
     scene_type: SceneType
-    scene_id: SceneId
-    user_id: UserId | None = None
+    scene_id: str
+    user_id: str | None = None

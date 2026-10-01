@@ -1,6 +1,6 @@
 from typing_extensions import override
 
-from ..common import FileInfo, GroupId, MemberRole, MessageId, ReactionValue, RequestId, UserId, UserSnapshot
+from ..common import FileInfo, MemberRole, ReactionValue, UserSnapshot
 from ..messages import Message
 from .base import Event, SceneEvent
 from .formatting import (
@@ -15,7 +15,7 @@ from .formatting import (
 
 
 class MessageReceivedEvent(SceneEvent):
-    message_id: MessageId
+    message_id: str
     message: Message
     sender: UserSnapshot | None = None
     is_mentioned: bool = False
@@ -28,8 +28,8 @@ class MessageReceivedEvent(SceneEvent):
 
 
 class MessageRecalledEvent(SceneEvent):
-    message_id: MessageId
-    operator_id: UserId | None = None
+    message_id: str
+    operator_id: str | None = None
 
     @override
     def print_log(self) -> None:
@@ -38,7 +38,7 @@ class MessageRecalledEvent(SceneEvent):
 
 
 class MessageReactionChangedEvent(SceneEvent):
-    message_id: MessageId
+    message_id: str
     reaction: ReactionValue
     added: bool
     count: int | None = None
@@ -55,9 +55,9 @@ class MessageReactionChangedEvent(SceneEvent):
 
 
 class MemberJoinedEvent(SceneEvent):
-    member_id: UserId
-    operator_id: UserId | None = None
-    inviter_id: UserId | None = None
+    member_id: str
+    operator_id: str | None = None
+    inviter_id: str | None = None
 
     @override
     def print_log(self) -> None:
@@ -66,8 +66,8 @@ class MemberJoinedEvent(SceneEvent):
 
 
 class MemberLeftEvent(SceneEvent):
-    member_id: UserId
-    operator_id: UserId | None = None
+    member_id: str
+    operator_id: str | None = None
     kicked: bool = False
 
     @override
@@ -80,8 +80,8 @@ class MemberLeftEvent(SceneEvent):
 
 
 class MemberMuteChangedEvent(SceneEvent):
-    member_id: UserId
-    operator_id: UserId | None = None
+    member_id: str
+    operator_id: str | None = None
     muted: bool
     duration: int | None = None
 
@@ -99,8 +99,8 @@ class MemberMuteChangedEvent(SceneEvent):
 
 
 class MemberRoleChangedEvent(SceneEvent):
-    member_id: UserId
-    operator_id: UserId | None = None
+    member_id: str
+    operator_id: str | None = None
     old_role: MemberRole | None = None
     new_role: MemberRole
 
@@ -116,7 +116,7 @@ class MemberRoleChangedEvent(SceneEvent):
 class GroupNameChangedEvent(SceneEvent):
     old_name: str | None = None
     new_name: str
-    operator_id: UserId | None = None
+    operator_id: str | None = None
 
     @override
     def print_log(self) -> None:
@@ -130,7 +130,7 @@ class GroupNameChangedEvent(SceneEvent):
 class GroupMuteChangedEvent(SceneEvent):
     muted: bool
     duration: int | None = None
-    operator_id: UserId | None = None
+    operator_id: str | None = None
 
     @override
     def print_log(self) -> None:
@@ -154,8 +154,8 @@ class FileUploadedEvent(SceneEvent):
 
 
 class EssenceChangedEvent(SceneEvent):
-    message_id: MessageId
-    operator_id: UserId | None = None
+    message_id: str
+    operator_id: str | None = None
     added: bool
 
     @override
@@ -168,7 +168,7 @@ class EssenceChangedEvent(SceneEvent):
 
 
 class PokeReceivedEvent(SceneEvent):
-    target_id: UserId
+    target_id: str
     display_action: str | None = None
     display_suffix: str | None = None
     display_image_url: str | None = None
@@ -179,8 +179,8 @@ class PokeReceivedEvent(SceneEvent):
 
 
 class FriendRequestedEvent(Event):
-    request_id: RequestId
-    user_id: UserId
+    request_id: str
+    user_id: str
     comment: str | None = None
 
     @override
@@ -190,7 +190,7 @@ class FriendRequestedEvent(Event):
 
 
 class FriendAddedEvent(Event):
-    user_id: UserId
+    user_id: str
 
     @override
     def print_log(self) -> None:
@@ -198,8 +198,8 @@ class FriendAddedEvent(Event):
 
 
 class GroupJoinRequestedEvent(SceneEvent):
-    request_id: RequestId
-    inviter_id: UserId | None = None
+    request_id: str
+    inviter_id: str | None = None
     comment: str | None = None
 
     @override
@@ -209,9 +209,9 @@ class GroupJoinRequestedEvent(SceneEvent):
 
 
 class GroupInvitationReceivedEvent(SceneEvent):
-    request_id: RequestId | None = None
-    inviter_id: UserId | None = None
-    source_group_id: GroupId | None = None
+    request_id: str | None = None
+    inviter_id: str | None = None
+    source_group_id: str | None = None
 
     @override
     def print_log(self) -> None:
@@ -220,9 +220,9 @@ class GroupInvitationReceivedEvent(SceneEvent):
 
 
 class GroupMemberInviteRequestedEvent(SceneEvent):
-    request_id: RequestId
-    inviter_id: UserId | None = None
-    target_user_id: UserId
+    request_id: str
+    inviter_id: str | None = None
+    target_user_id: str
 
     @override
     def print_log(self) -> None:

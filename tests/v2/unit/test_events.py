@@ -2,8 +2,7 @@ import asyncio
 import logging
 from datetime import UTC, datetime
 
-from hyperot.v2 import Image, Mention, MessageReceivedEvent, SceneType, Text, UserId
-from hyperot.v2.common import MessageId, SceneId
+from hyperot.v2 import Image, Mention, MessageReceivedEvent, SceneType, Text
 from hyperot.v2.events import Event, EventDispatcher
 from hyperot.v2.messages import Message
 
@@ -16,9 +15,9 @@ def test_message_get_accepts_event_instances():
     event = MessageReceivedEvent(
         timestamp=datetime.now(UTC),
         scene_type=SceneType.GROUP,
-        scene_id=SceneId("100"),
-        user_id=UserId("200"),
-        message_id=MessageId("m1"),
+        scene_id="100",
+        user_id="200",
+        message_id="m1",
         message=Message(Text(text="hello")),
     )
     assert str(event.message) == "hello"
@@ -40,9 +39,9 @@ def test_dispatcher_runs_all_matching_handlers_parent_first():
         event = MessageReceivedEvent(
             timestamp=datetime.now(UTC),
             scene_type=SceneType.USER,
-            scene_id=SceneId("1"),
-            user_id=UserId("1"),
-            message_id=MessageId("m"),
+            scene_id="1",
+            user_id="1",
+            message_id="m",
             message=Message(),
         )
         await dispatcher.dispatch(event, FakeClient())  # type: ignore[arg-type]
@@ -70,11 +69,11 @@ def test_dispatcher_logs_every_event():
             event = MessageReceivedEvent(
                 timestamp=datetime.now(UTC),
                 scene_type=SceneType.GROUP,
-                scene_id=SceneId("1"),
-                user_id=UserId("2"),
-                message_id=MessageId("m"),
+                scene_id="1",
+                user_id="2",
+                message_id="m",
                 message=Message(
-                    Mention(user_id=UserId("1")),
+                    Mention(user_id="1"),
                     Text(text=" hi "),
                     Image(source="https://example.com/a.png"),
                 ),

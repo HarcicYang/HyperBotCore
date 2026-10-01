@@ -27,7 +27,7 @@ async def handler_msg(event: MessageReceivedEvent, client: Client) -> None:
     if event.user_id is not None:
         segments.insert(1, Mention(user_id=event.user_id))
 
-    await scene.send(Message(segments=tuple(segments)))
+    await scene.send(Message(*segments))
     await asyncio.sleep(3)
     await client.api.message(result.message_id).recall()
 

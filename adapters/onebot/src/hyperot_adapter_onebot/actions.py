@@ -61,12 +61,8 @@ from hyperot.v2.actions.formatting import (
 from hyperot.v2.adapter import ActionRegistry
 from hyperot.v2.common import (
     ActionRejectedError,
-    FileId,
-    GroupId,
     MemberRole,
-    MessageId,
     SceneType,
-    UserId,
 )
 from hyperot.v2.messages import Message
 
@@ -118,10 +114,10 @@ class ActionTransport(Protocol):
     async def call(self, action: str, params: dict[str, Any], timeout: float) -> dict[str, Any]: ...
 
 
-MessageGroupLookup = Callable[[MessageId], GroupId | None]
-MessageGroupRemember = Callable[[MessageId, GroupId], None]
+MessageGroupLookup = Callable[[str], str | None]
+MessageGroupRemember = Callable[[str, str], None]
 RequestSubtypeLookup = Callable[[str], str | None]
-FileContextLookup = Callable[[FileId], dict[str, JsonValue] | None]
+FileContextLookup = Callable[[str], dict[str, JsonValue] | None]
 
 
 class OneBotKickMemberAction(KickMemberAction):
@@ -137,7 +133,7 @@ class OneBotLeaveGroupAction(LeaveGroupAction):
 
 
 class SendPrivateMessageAction(Action[SendResult]):
-    user_id: UserId
+    user_id: str
     message: Message
 
     @override
@@ -146,7 +142,7 @@ class SendPrivateMessageAction(Action[SendResult]):
 
 
 class SendGroupMessageAction(Action[SendResult]):
-    group_id: GroupId
+    group_id: str
     message: Message
 
     @override
@@ -164,8 +160,8 @@ class GetForwardMessageAction(Action[Message]):
 
 
 class GroupReactionAction(Action[None]):
-    group_id: GroupId
-    message_id: MessageId
+    group_id: str
+    message_id: str
     reaction: str
     enabled: bool = True
 
@@ -176,7 +172,7 @@ class GroupReactionAction(Action[None]):
 
 
 class UploadGroupFileAction(Action[None]):
-    group_id: GroupId
+    group_id: str
     file: str
     name: str | None = None
     folder: str | None = None
@@ -189,7 +185,7 @@ class UploadGroupFileAction(Action[None]):
 
 
 class UploadPrivateFileAction(Action[None]):
-    user_id: UserId
+    user_id: str
     file: str
     name: str | None = None
 
@@ -201,8 +197,8 @@ class UploadPrivateFileAction(Action[None]):
 
 class GetGroupFileUrlAction(Action[FileUrl]):
     log_level: ClassVar[str] = "TRACE"
-    group_id: GroupId
-    file_id: FileId
+    group_id: str
+    file_id: str
 
     @override
     def log_summary(self) -> str:
@@ -211,8 +207,8 @@ class GetGroupFileUrlAction(Action[FileUrl]):
 
 class GetPrivateFileUrlAction(Action[FileUrl]):
     log_level: ClassVar[str] = "TRACE"
-    user_id: UserId
-    file_id: FileId
+    user_id: str
+    file_id: str
     file_hash: str | None = None
 
     @override
@@ -312,9 +308,9 @@ class OneBotActions:
         else:
             params["user_id"] = str(action.scene_id)
         data = await self._call("send_msg", params)
-        message_id = MessageId(str(data["message_id"]))
+        message_id = str(data["message_id"])
         if action.scene_type == SceneType.GROUP and self.message_group_remember is not None:
-            self.message_group_remember(message_id, GroupId(str(action.scene_id)))
+            self.message_group_remember(message_id, str(action.scene_id))
         return SendResult(message_id=message_id)
 
     async def send_private_message(self, action: SendPrivateMessageAction) -> SendResult:
@@ -322,14 +318,14 @@ class OneBotActions:
             "send_private_msg",
             {"user_id": str(action.user_id), "message": self.codec.encode_message(action.message)},
         )
-        return SendResult(message_id=MessageId(str(data["message_id"])))
+        return SendResult(message_id=str(data["message_id"]))
 
     async def send_group_message(self, action: SendGroupMessageAction) -> SendResult:
         data = await self._call(
             "send_group_msg",
             {"group_id": str(action.group_id), "message": self.codec.encode_message(action.message)},
         )
-        message_id = MessageId(str(data["message_id"]))
+        message_id = str(data["message_id"])
         if self.message_group_remember is not None:
             self.message_group_remember(message_id, action.group_id)
         return SendResult(message_id=message_id)
@@ -361,7 +357,7 @@ class OneBotActions:
     async def get_bot_profile(self, _action: GetBotProfileAction) -> BotProfile:
         data = await self._call("get_login_info", {})
         return BotProfile(
-            user_id=UserId(str(data.get("user_id", 0))),
+            user_id=str(data.get("user_id", 0)),
             display_name=str(data.get("nickname", "")),
         )
 
@@ -385,7 +381,7 @@ class OneBotActions:
     async def get_user_profile(self, action: GetUserProfileAction) -> UserProfile:
         data = await self._call("get_stranger_info", {"user_id": str(action.user_id)})
         return UserProfile(
-            user_id=UserId(str(data.get("user_id", action.user_id))),
+            user_id=str(data.get("user_id", action.user_id)),
             display_name=str(data.get("nickname", "")),
             sex=str(data.get("sex", "")),
             age=int(data.get("age", 0)),
@@ -398,7 +394,7 @@ class OneBotActions:
             items = items.get("list", [])
         return [
             FriendInfo(
-                user_id=UserId(str(item.get("user_id", 0))),
+                user_id=str(item.get("user_id", 0)),
                 display_name=str(item.get("nickname", "")),
             )
             for item in items
@@ -407,7 +403,7 @@ class OneBotActions:
     async def get_group_profile(self, action: GetGroupProfileAction) -> GroupProfile:
         data = await self._call("get_group_info", {"group_id": str(action.group_id)})
         return GroupProfile(
-            group_id=GroupId(str(data.get("group_id", action.group_id))),
+            group_id=str(data.get("group_id", action.group_id)),
             name=str(data.get("group_name", "")),
             member_count=int(data.get("member_count", 0)),
             max_member_count=int(data.get("max_member_count", 0)),
@@ -420,7 +416,7 @@ class OneBotActions:
             items = items.get("list", [])
         return [
             GroupProfile(
-                group_id=GroupId(str(item.get("group_id", 0))),
+                group_id=str(item.get("group_id", 0)),
                 name=str(item.get("group_name", "")),
                 member_count=int(item.get("member_count", 0)),
                 max_member_count=int(item.get("max_member_count", 0)),
@@ -434,8 +430,8 @@ class OneBotActions:
             {"group_id": str(action.group_id), "user_id": str(action.user_id)},
         )
         return GroupMemberProfile(
-            group_id=GroupId(str(data.get("group_id", action.group_id))),
-            user_id=UserId(str(data.get("user_id", action.user_id))),
+            group_id=str(data.get("group_id", action.group_id)),
+            user_id=str(data.get("user_id", action.user_id)),
             display_name=str(data.get("nickname", "")),
             card=str(data.get("card", "")),
             role=_member_role(data.get("role")),
@@ -448,8 +444,8 @@ class OneBotActions:
             items = items.get("list", [])
         return [
             GroupMemberProfile(
-                group_id=GroupId(str(item.get("group_id", action.group_id))),
-                user_id=UserId(str(item.get("user_id", 0))),
+                group_id=str(item.get("group_id", action.group_id)),
+                user_id=str(item.get("user_id", 0)),
                 display_name=str(item.get("nickname", "")),
                 card=str(item.get("card", "")),
                 role=_member_role(item.get("role")),
@@ -526,8 +522,8 @@ class OneBotActions:
 
     async def _send_group_reaction(
         self,
-        group_id: GroupId,
-        message_id: MessageId,
+        group_id: str,
+        message_id: str,
         reaction: str,
         enabled: bool,
     ) -> None:

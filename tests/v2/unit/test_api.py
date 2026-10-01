@@ -20,7 +20,7 @@ from hyperot.v2.actions import (
 from hyperot.v2.actions.result import format_result
 from hyperot.v2.api import ClientAPI
 from hyperot.v2.client import ActionExecutor
-from hyperot.v2.common import ActionTimeoutError, ClientNotRunningError, GroupId, MessageId, SceneId, SceneType
+from hyperot.v2.common import ActionTimeoutError, ClientNotRunningError, SceneType
 from hyperot.v2.hyperogger import Logger
 from hyperot.v2.messages import Message, Text
 
@@ -32,7 +32,7 @@ class FakeContext:
 
     async def execute(self, action: Action[ResultT]) -> ResultT:
         if isinstance(action, SendMessageAction):
-            return SendResult(message_id=MessageId("m1"))  # type: ignore[return-value]
+            return SendResult(message_id="m1")  # type: ignore[return-value]
         if isinstance(action, GetBotProfileAction):
             return BotProfile(user_id="1", display_name="bot")  # type: ignore[return-value]
         raise AssertionError(action)
@@ -41,7 +41,7 @@ class FakeContext:
 def test_hierarchical_api():
     async def run() -> None:
         api = ClientAPI(FakeContext())
-        sent = await api.group(GroupId("100")).send("hello")
+        sent = await api.group("100").send("hello")
         assert sent.message_id == "m1"
         profile = await api.bot.profile()
         assert profile.display_name == "bot"
@@ -56,7 +56,7 @@ class QueryAdapter:
 
 class SendAdapter:
     async def execute(self, _action: Action[ResultT]) -> ResultT:
-        return SendResult(message_id=MessageId("m1"))  # type: ignore[return-value]
+        return SendResult(message_id="m1")  # type: ignore[return-value]
 
 
 class FailingAdapter:
@@ -107,7 +107,7 @@ def test_write_action_logs_at_info():
     async def run() -> None:
         action = SendMessageAction(
             scene_type=SceneType.GROUP,
-            scene_id=SceneId("100"),
+            scene_id="100",
             message=Message(Text(text="hello")),
         )
         with capture_api_logs() as messages:
@@ -125,7 +125,7 @@ def test_failed_action_logs_at_warning():
     async def run() -> None:
         action = SendMessageAction(
             scene_type=SceneType.GROUP,
-            scene_id=SceneId("100"),
+            scene_id="100",
             message=Message(Text(text="hello")),
         )
         with capture_api_logs() as messages:

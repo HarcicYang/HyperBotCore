@@ -11,7 +11,6 @@ from hyperot_adapter_onebot.actions import (
 from hyperot_adapter_onebot.segments import OneBotSegmentCodec
 
 from hyperot.v2.adapter import ActionRegistry, validate_manifest
-from hyperot.v2.common import GroupId
 from hyperot.v2.messages import Message, Text
 
 _ROOT = Path(__file__).resolve().parents[3]
@@ -57,7 +56,7 @@ def test_adapter_registers_all_onebot_actions():
 
 
 def test_adapter_action_log_summaries():
-    send = SendGroupMessageAction(group_id=GroupId("100"), message=Message(Text(text="hello")))
+    send = SendGroupMessageAction(group_id="100", message=Message(Text(text="hello")))
     assert send.log_level == "INFO"
     assert send.log_summary() == "[group] 100 send: hello"
 

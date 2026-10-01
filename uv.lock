@@ -124,7 +124,7 @@ wheels = [
 
 [[package]]
 name = "hyper-bot"
-version = "2.0.0"
+version = "2.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
@@ -167,7 +167,7 @@ dev = [
 
 [[package]]
 name = "hyperot-adapter-onebot"
-version = "2.0.0"
+version = "2.0.1"
 source = { editable = "adapters/onebot" }
 dependencies = [
     { name = "fastapi" },

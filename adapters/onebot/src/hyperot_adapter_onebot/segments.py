@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import json
-from typing import Annotated, Any, Literal
+from collections.abc import Callable
+from dataclasses import dataclass, fields
+from typing import Any, Literal, Protocol, cast
 
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 from typing_extensions import override
 
-from hyperot.v2.common import FileId, MessageId, UserId
 from hyperot.v2.messages import (
     Audio,
     Face,
@@ -20,6 +21,9 @@ from hyperot.v2.messages import (
     Message,
     Quote,
     Segment,
+    SegmentDecoder,
+    SegmentEncoder,
+    SegmentRegistry,
     Text,
     UnknownSegment,
     Video,
@@ -184,28 +188,6 @@ class GreyTipsWire(WireSegment):
     data: TextData
 
 
-WireSegmentUnion = Annotated[
-    TextWire
-    | MentionWire
-    | QuoteWire
-    | FaceWire
-    | PokeWire
-    | ImageWire
-    | AudioWire
-    | VideoWire
-    | FileWire
-    | NodeWire
-    | ForwardWire
-    | JsonWire
-    | MarketFaceWire
-    | RpsWire
-    | DiceWire
-    | GreyTipsWire,
-    Field(discriminator="type"),
-]
-WIRE_SEGMENT_ADAPTER = TypeAdapter(WireSegmentUnion)
-
-
 class OneBotText(Text):
     @classmethod
     def from_wire(cls, payload: TextWire) -> OneBotText:
@@ -220,12 +202,13 @@ class OneBotMention(Mention):
     def from_wire(cls, payload: MentionWire) -> Mention | MentionAll:
         if str(payload.data.qq) == "all":
             return MentionAll()
-        return cls(user_id=UserId(str(payload.data.qq)))
+        return cls(user_id=str(payload.data.qq))
 
     def to_wire(self) -> MentionWire:
         return MentionWire(data=MentionData(qq=str(self.user_id)))
 
 
+@dataclass(frozen=True)
 class OneBotImage(Image):
     is_emoji: bool = False
 
@@ -263,6 +246,7 @@ class OneBotVideo(Video):
         return VideoWire(data=VideoData(file=self.source, url=self.source))
 
 
+@dataclass(frozen=True)
 class OneBotFile(File):
     file_hash: str = ""
 
@@ -271,7 +255,7 @@ class OneBotFile(File):
         return cls(
             source=payload.data.url or payload.data.file_id,
             name=payload.data.file_name or None,
-            file_id=FileId(payload.data.file_id) if payload.data.file_id else None,
+            file_id=str(payload.data.file_id) if payload.data.file_id else None,
             file_hash=payload.data.file_hash,
         )
 
@@ -289,7 +273,7 @@ class OneBotFile(File):
 class OneBotQuote(Quote):
     @classmethod
     def from_wire(cls, payload: QuoteWire) -> OneBotQuote:
-        return cls(message_id=MessageId(str(payload.data.id)))
+        return cls(message_id=str(payload.data.id))
 
     def to_wire(self) -> QuoteWire:
         return QuoteWire(data=ReplyData(id=str(self.message_id)))
@@ -308,7 +292,7 @@ class OneBotForwardNode(ForwardNode):
     @classmethod
     def from_wire(cls, payload: NodeWire) -> OneBotForwardNode:
         return cls(
-            user_id=UserId(str(payload.data.user_id)),
+            user_id=str(payload.data.user_id),
             display_name=payload.data.nickname,
             message=OneBotSegmentCodec().decode_segments(payload.data.content),
         )
@@ -332,6 +316,7 @@ class OneBotFace(Face):
         return FaceWire(data=FaceData(id=self.face_id))
 
 
+@dataclass(frozen=True)
 class OneBotPokeSegment(Segment):
     poke_id: str
     poke_type: str
@@ -348,6 +333,7 @@ class OneBotPokeSegment(Segment):
         return "[戳一戳]"
 
 
+@dataclass(frozen=True)
 class OneBotMarketFace(Segment):
     face_id: str
     tab_id: str
@@ -365,6 +351,7 @@ class OneBotMarketFace(Segment):
         return f"[商城表情: {self.name or self.face_id}]"
 
 
+@dataclass(frozen=True)
 class OneBotJson(Segment):
     payload: str
 
@@ -406,6 +393,7 @@ class OneBotDice(Segment):
         return "[骰子]"
 
 
+@dataclass(frozen=True)
 class OneBotGreyTips(Segment):
     text: str
 
@@ -421,141 +409,188 @@ class OneBotGreyTips(Segment):
         return self.text
 
 
-def _to_wire(segment: Segment) -> WireSegmentUnion:
-    if isinstance(segment, OneBotText):
-        return segment.to_wire()
-    if isinstance(segment, OneBotMention):
-        return segment.to_wire()
-    if isinstance(segment, OneBotImage):
-        return segment.to_wire()
-    if isinstance(segment, OneBotAudio):
-        return segment.to_wire()
-    if isinstance(segment, OneBotVideo):
-        return segment.to_wire()
-    if isinstance(segment, OneBotFile):
-        return segment.to_wire()
-    if isinstance(segment, OneBotQuote):
-        return segment.to_wire()
-    if isinstance(segment, OneBotForward):
-        return segment.to_wire()
-    if isinstance(segment, OneBotForwardNode):
-        return segment.to_wire()
-    if isinstance(segment, OneBotFace):
-        return segment.to_wire()
-    if isinstance(segment, OneBotPokeSegment):
-        return segment.to_wire()
-    if isinstance(segment, OneBotMarketFace):
-        return segment.to_wire()
-    if isinstance(segment, OneBotJson):
-        return segment.to_wire()
-    if isinstance(segment, OneBotRps):
-        return segment.to_wire()
-    if isinstance(segment, OneBotDice):
-        return segment.to_wire()
-    if isinstance(segment, OneBotGreyTips):
-        return segment.to_wire()
-    if isinstance(segment, Text):
-        return OneBotText(text=segment.text).to_wire()
-    if isinstance(segment, Mention):
-        return OneBotMention(user_id=segment.user_id).to_wire()
-    if isinstance(segment, MentionAll):
-        return OneBotMention(user_id=UserId("all")).to_wire()
-    if isinstance(segment, Image):
-        return OneBotImage(source=segment.source, alt=segment.alt).to_wire()
-    if isinstance(segment, Audio):
-        return OneBotAudio(source=segment.source, title=segment.title, duration=segment.duration).to_wire()
-    if isinstance(segment, Video):
-        return OneBotVideo(
-            source=segment.source,
-            duration=segment.duration,
-            thumbnail=segment.thumbnail,
-        ).to_wire()
-    if isinstance(segment, File):
-        return OneBotFile(
-            source=segment.source,
-            name=segment.name,
-            size=segment.size,
-            file_id=segment.file_id,
-        ).to_wire()
-    if isinstance(segment, Quote):
-        return OneBotQuote(message_id=segment.message_id, message=segment.message).to_wire()
-    if isinstance(segment, Forward):
-        return OneBotForward(forward_id=segment.forward_id).to_wire()
-    if isinstance(segment, ForwardNode):
-        return OneBotForwardNode(
-            user_id=segment.user_id,
-            display_name=segment.display_name,
-            message=segment.message,
-        ).to_wire()
-    if isinstance(segment, Face):
-        return OneBotFace(face_id=segment.face_id, is_large=segment.is_large).to_wire()
-    if isinstance(segment, Markdown):
-        return OneBotJson(payload=json.dumps({"content": segment.text}, ensure_ascii=False)).to_wire()
-    raise TypeError(f"unsupported OneBot segment: {type(segment).__name__}")
+class OneBotWireSegment(Protocol):
+    """A segment class that knows how to cross the OneBot wire boundary."""
+
+    @classmethod
+    def from_wire(cls, payload: Any) -> Segment: ...
+
+    def to_wire(self) -> Any: ...
 
 
-def _from_wire(payload: WireSegmentUnion) -> Segment:
-    match payload:
-        case TextWire():
-            return OneBotText.from_wire(payload)
-        case MentionWire():
-            return OneBotMention.from_wire(payload)
-        case QuoteWire():
-            return OneBotQuote.from_wire(payload)
-        case FaceWire():
-            return OneBotFace.from_wire(payload)
-        case PokeWire():
-            return OneBotPokeSegment.from_wire(payload)
-        case ImageWire():
-            return OneBotImage.from_wire(payload)
-        case AudioWire():
-            return OneBotAudio.from_wire(payload)
-        case VideoWire():
-            return OneBotVideo.from_wire(payload)
-        case FileWire():
-            return OneBotFile.from_wire(payload)
-        case NodeWire():
-            return OneBotForwardNode.from_wire(payload)
-        case ForwardWire():
-            return OneBotForward.from_wire(payload)
-        case JsonWire():
-            return OneBotJson.from_wire(payload)
-        case MarketFaceWire():
-            return OneBotMarketFace.from_wire(payload)
-        case RpsWire():
-            return OneBotRps.from_wire(payload)
-        case DiceWire():
-            return OneBotDice.from_wire(payload)
-        case GreyTipsWire():
-            return OneBotGreyTips.from_wire(payload)
+# The hook on Segment builds the dataclass at runtime, so only the class hierarchy is
+# visible to a type checker; this cast is where the wire methods are pulled out.
+def _wire_methods(segment_type: type[Segment]) -> OneBotWireSegment:
+    return cast(OneBotWireSegment, segment_type)
+
+
+def _wire_decoder(adapter: TypeAdapter[Any], from_wire: Callable[[Any], Segment]) -> SegmentDecoder:
+    def decode(item: Any) -> Segment:
+        return from_wire(adapter.validate_python(item))
+
+    return decode
+
+
+def _wire_encoder(to_wire: Callable[..., Any]) -> SegmentEncoder:
+    def encode(segment: Segment) -> dict[str, Any]:
+        return to_wire(segment).model_dump(mode="json")
+
+    return encode
+
+
+def _adapting_encoder(target: type[Any]) -> SegmentEncoder:
+    # Core segments carry the fields their OneBot counterpart needs, so the shared
+    # names are copied over and the counterpart does the actual wire encoding.
+    names = tuple(field.name for field in fields(target))
+    encode_target = _wire_encoder(target.to_wire)
+
+    def encode(segment: Segment) -> dict[str, Any]:
+        values = {name: getattr(segment, name) for name in names if hasattr(segment, name)}
+        return encode_target(target(**values))
+
+    return encode
+
+
+def _encode_mention_all(segment: Segment) -> dict[str, Any]:
+    return _wire_encoder(OneBotMention.to_wire)(OneBotMention(user_id="all"))
+
+
+def _encode_markdown(segment: Segment) -> dict[str, Any]:
+    if not isinstance(segment, Markdown):
+        raise TypeError(f"expected Markdown, got {type(segment).__name__}")
+    payload = json.dumps({"content": segment.text}, ensure_ascii=False)
+    return _wire_encoder(OneBotJson.to_wire)(OneBotJson(payload=payload))
+
+
+# wire type, wire model, adapter-side segment class
+_WIRE_SEGMENTS: tuple[tuple[str, type[Any], type[Segment]], ...] = (
+    ("text", TextWire, OneBotText),
+    ("at", MentionWire, OneBotMention),
+    ("reply", QuoteWire, OneBotQuote),
+    ("face", FaceWire, OneBotFace),
+    ("poke", PokeWire, OneBotPokeSegment),
+    ("image", ImageWire, OneBotImage),
+    ("record", AudioWire, OneBotAudio),
+    ("video", VideoWire, OneBotVideo),
+    ("file", FileWire, OneBotFile),
+    ("node", NodeWire, OneBotForwardNode),
+    ("forward", ForwardWire, OneBotForward),
+    ("json", JsonWire, OneBotJson),
+    ("mface", MarketFaceWire, OneBotMarketFace),
+    ("rps", RpsWire, OneBotRps),
+    ("dice", DiceWire, OneBotDice),
+    ("grey_tips", GreyTipsWire, OneBotGreyTips),
+)
+
+# core segment, wire type, adapter-side counterpart used to encode it
+_CORE_SEGMENTS: tuple[tuple[type[Segment], str, type[Segment]], ...] = (
+    (Text, "text", OneBotText),
+    (Mention, "at", OneBotMention),
+    (Image, "image", OneBotImage),
+    (Audio, "record", OneBotAudio),
+    (Video, "video", OneBotVideo),
+    (File, "file", OneBotFile),
+    (Quote, "reply", OneBotQuote),
+    (Forward, "forward", OneBotForward),
+    (ForwardNode, "node", OneBotForwardNode),
+    (Face, "face", OneBotFace),
+)
+
+
+def _register_decoder(registry: SegmentRegistry, wire_type: str) -> SegmentDecoder:
+    decode = registry.decoder(wire_type)
+    if decode is None:
+        raise ValueError(f"no decoder registered for wire type {wire_type!r}")
+    return decode
+
+
+def _register_segments(registry: SegmentRegistry) -> None:
+    for wire_type, wire_model, segment_type in _WIRE_SEGMENTS:
+        adapter = TypeAdapter(wire_model)
+        wire_segment = _wire_methods(segment_type)
+        registry.register(
+            segment_type,
+            wire_type=wire_type,
+            decode=_wire_decoder(adapter, wire_segment.from_wire),
+            encode=_wire_encoder(wire_segment.to_wire),
+        )
+    for core_type, wire_type, adapter_type in _CORE_SEGMENTS:
+        registry.register(
+            core_type,
+            wire_type=wire_type,
+            decode=_register_decoder(registry, wire_type),
+            encode=_adapting_encoder(adapter_type),
+        )
+    registry.register(
+        MentionAll,
+        wire_type="at",
+        decode=_register_decoder(registry, "at"),
+        encode=_encode_mention_all,
+    )
+    registry.register(
+        Markdown,
+        wire_type="json",
+        decode=_register_decoder(registry, "json"),
+        encode=_encode_markdown,
+    )
 
 
 class OneBotSegmentCodec:
+    def __init__(self) -> None:
+        self.registry = SegmentRegistry()
+        _register_segments(self.registry)
+
+    def register_segment(
+        self,
+        segment_type: type[Segment],
+        *,
+        wire_type: str,
+        decode: SegmentDecoder,
+        encode: SegmentEncoder,
+        replace: bool = False,
+    ) -> None:
+        """Register a segment type with this codec so it survives a wire round trip."""
+        self.registry.register(
+            segment_type,
+            wire_type=wire_type,
+            decode=decode,
+            encode=encode,
+            replace=replace,
+        )
+
     def decode_segments(self, payload: list[dict[str, Any]]) -> Message:
-        segments: list[Segment] = []
-        for item in payload:
-            try:
-                wire = WIRE_SEGMENT_ADAPTER.validate_python(item)
-            except ValidationError:
-                wire_type = str(item.get("type", "unknown")) if isinstance(item, dict) else "unknown"
-                data = item.get("data", {}) if isinstance(item, dict) else {}
-                segments.append(
-                    UnknownSegment(
-                        wire_type=wire_type,
-                        data=data if isinstance(data, dict) else {},
-                    )
-                )
-                continue
-            segments.append(_from_wire(wire))
-        return Message(*segments)
+        return Message(*(self._decode_segment(item) for item in payload))
+
+    def _decode_segment(self, item: Any) -> Segment:
+        wire_type = str(item.get("type", "unknown")) if isinstance(item, dict) else "unknown"
+        decode = self.registry.decoder(wire_type)
+        if decode is None:
+            return self._unknown_segment(item, wire_type)
+        try:
+            return decode(item)
+        except Exception:  # noqa: BLE001
+            # Registered decoders may raise anything. A segment that cannot be decoded
+            # keeps its raw payload instead of failing the whole message.
+            return self._unknown_segment(item, wire_type)
+
+    @staticmethod
+    def _unknown_segment(item: Any, wire_type: str) -> UnknownSegment:
+        data = item.get("data", {}) if isinstance(item, dict) else {}
+        return UnknownSegment(wire_type=wire_type, data=data if isinstance(data, dict) else {})
 
     def encode_segments(self, message: Message) -> list[dict[str, Any]]:
-        return [
-            {"type": segment.wire_type, "data": segment.data}
-            if isinstance(segment, UnknownSegment)
-            else _to_wire(segment).model_dump(mode="json")
-            for segment in message
-        ]
+        return [self._encode_segment(segment) for segment in message]
+
+    def _encode_segment(self, segment: Segment) -> dict[str, Any]:
+        if isinstance(segment, UnknownSegment):
+            return {"type": segment.wire_type, "data": segment.data}
+        encode = self.registry.encoder_for(type(segment))
+        if encode is None:
+            raise TypeError(f"unsupported OneBot segment: {type(segment).__name__}")
+        return encode(segment)
+
+    def supports(self, segment_type: type[Segment]) -> bool:
+        return self.registry.supports(segment_type)
 
     def decode_message(self, payload: list[dict[str, Any]]) -> Message:
         if not isinstance(payload, list):

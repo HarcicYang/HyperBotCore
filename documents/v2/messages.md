@@ -22,6 +22,17 @@ message = Message(
 )
 ```
 
+也接受段列表或元组，几种写法等价：
+
+```python
+segments = [Text(text="你好"), Image(source="https://example.com/a.png")]
+
+message = Message(segments)
+message = Message(*segments)
+message = Message(tuple(segments))
+message = Message(segments=segments)
+```
+
 也可以直接构造纯文本：
 
 ```python
@@ -138,6 +149,8 @@ face = Face(face_id="123")
 | `Face` | QQ 表情。 |
 | `Markdown` | Markdown 内容。 |
 
+消息段是不可变的 dataclass：字段写注解即可，位置参数按字段顺序传入，和 `Face("123", is_large=True)` 一样混用也没问题。`model_dump()`、`model_validate()` 这类 pydantic 接口不再提供，段之间用 `==` 比较即可。
+
 ## 消息来源
 
 不同适配器对媒体来源的支持可能不同。常见来源包括：
@@ -157,3 +170,54 @@ face = Face(face_id="123")
 ```
 
 普通业务代码通常不需要处理这种情况。需要协议级扩展时，可以读取消息段本身。
+
+## 注册自定义消息段
+
+消息段是标准库 dataclass，写清字段注解即可，位置参数和关键字参数都能用：
+
+```python
+from hyperot.v2 import Segment
+
+
+class WeatherCard(Segment):
+    city: str
+    temperature: int
+
+    def display_text(self) -> str:
+        return f"[天气: {self.city} {self.temperature}°C]"
+```
+
+能不能在协议上收发，取决于当前适配器的段注册表。注册之后，自定义段和内置段一样参与消息往返：
+
+```python
+from typing import Any
+
+from hyperot.v2 import Segment
+
+codec = client.adapter.segment_codec
+
+
+def decode_weather(item: dict[str, Any]) -> Segment:
+    data = item["data"]
+    return WeatherCard(city=data["city"], temperature=data["temperature"])
+
+
+def encode_weather(segment: Segment) -> dict[str, Any]:
+    return {"type": "weather", "data": {"city": segment.city, "temperature": segment.temperature}}
+
+
+codec.register_segment(
+    WeatherCard,
+    wire_type="weather",
+    decode=decode_weather,
+    encode=encode_weather,
+)
+```
+
+注册表的约定：
+
+- `decode` 收到协议端的原始段并返回段实例；解析失败会自动降级为 `UnknownSegment`，不会让整条消息失败。
+- `encode` 把段变成可以直接发送的字典。
+- `wire_type` 是协议里的段类型名，重复占用同一个名字会报错，确认要覆盖时加 `replace=True`。
+- 没有注册的子类会沿用最近父类的编码器，所以继承内置段一般不需要再注册一次。
+- `codec.supports(SomeSegment)` 可以查询某个段能否被当前适配器发送。

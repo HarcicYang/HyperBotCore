@@ -1,3 +1,4 @@
+from .registry import SegmentDecoder, SegmentEncoder, SegmentRegistry
 from .segments import (
     Audio,
     Face,
@@ -29,6 +30,9 @@ __all__ = [
     "Message",
     "Quote",
     "Segment",
+    "SegmentDecoder",
+    "SegmentEncoder",
+    "SegmentRegistry",
     "Text",
     "UnknownSegment",
     "Video",

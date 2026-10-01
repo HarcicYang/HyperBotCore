@@ -4,7 +4,7 @@ import time
 import pytest
 from hyperot_adapter_onebot import OneBotConfig, create_adapter
 
-from hyperot.v2 import Client, GroupId, Message, Text, UserId
+from hyperot.v2 import Client, Message, Text
 
 from .conftest import EulerLive
 
@@ -33,13 +33,13 @@ def test_euler_safe_live_roundtrip(euler_live: EulerLive) -> None:
             version = await client.api.bot.version()
             assert version.protocol_version
 
-            group = await client.api.group(GroupId(str(euler_live.group_id))).profile()
+            group = await client.api.group(str(euler_live.group_id)).profile()
             assert str(group.group_id) == str(euler_live.group_id)
 
-            user = await client.api.user(UserId(str(euler_live.user_id))).profile()
+            user = await client.api.user(str(euler_live.user_id)).profile()
             assert str(user.user_id) == str(euler_live.user_id)
 
-            sent = await client.api.group(GroupId(str(euler_live.group_id))).send(
+            sent = await client.api.group(str(euler_live.group_id)).send(
                 Message(Text(text="HyperBotCore V2 live test"))
             )
             await asyncio.sleep(1)

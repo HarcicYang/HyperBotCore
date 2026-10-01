@@ -146,6 +146,12 @@ V1 和 V2 都使用 `Message` 和消息段，但 V2 的公共消息段更精简�
 - `Face`
 - `Markdown`
 
+V2 的消息和消息段是标准库 dataclass，不再基于 pydantic：
+
+- `Message(Text("hi"), Image("u"))` 与 V1 的 `*args` 写法一致，也接受段列表和元组。
+- 消息段不可变，`model_dump()`、`model_validate()` 不再提供，段之间用 `==` 比较。
+- 自定义消息段需要注册进适配器的段注册表，见[消息与消息段](messages.md)。
+
 见[消息与消息段](messages.md)。
 
 ## 推荐迁移顺序

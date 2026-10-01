@@ -44,7 +44,7 @@ from ..actions import (
     UserProfile,
     VersionInfo,
 )
-from ..common import FileId, GroupId, MemberRole, MessageId, RequestId, SceneId, SceneType, UserId
+from ..common import MemberRole, SceneType
 from ..messages import Message, Quote
 from .context import APIContext
 
@@ -55,7 +55,7 @@ IdInput = str | int
 class SceneAPI:
     _context: APIContext
     _scene_type: SceneType
-    _scene_id: SceneId
+    _scene_id: str
 
     async def send(self, message: Message | str) -> SendResult:
         if isinstance(message, str):
@@ -68,7 +68,7 @@ class SceneAPI:
             )
         )
 
-    async def recall(self, message_id: MessageId) -> None:
+    async def recall(self, message_id: str) -> None:
         await self._context.execute(RecallMessageAction(message_id=message_id))
 
     async def poke(self, user_id: IdInput) -> None:
@@ -76,14 +76,14 @@ class SceneAPI:
             PokeAction(
                 scene_type=self._scene_type,
                 scene_id=self._scene_id,
-                user_id=UserId(str(user_id)),
+                user_id=str(user_id),
             )
         )
 
 
 @dataclass(frozen=True, slots=True)
 class UserAPI(SceneAPI):
-    user_id: UserId
+    user_id: str
 
     async def profile(self) -> UserProfile:
         return await self._context.execute(GetUserProfileAction(user_id=self.user_id))
@@ -92,8 +92,8 @@ class UserAPI(SceneAPI):
 @dataclass(frozen=True, slots=True)
 class GroupMemberAPI:
     _context: APIContext
-    group_id: GroupId
-    user_id: UserId
+    group_id: str
+    user_id: str
 
     async def profile(self) -> GroupMemberProfile:
         return await self._context.execute(
@@ -148,10 +148,10 @@ class GroupMemberAPI:
 
 @dataclass(frozen=True, slots=True)
 class GroupAPI(SceneAPI):
-    group_id: GroupId
+    group_id: str
 
     def member(self, user_id: IdInput) -> GroupMemberAPI:
-        return GroupMemberAPI(self._context, self.group_id, UserId(str(user_id)))
+        return GroupMemberAPI(self._context, self.group_id, str(user_id))
 
     async def profile(self) -> GroupProfile:
         return await self._context.execute(GetGroupProfileAction(group_id=self.group_id))
@@ -175,7 +175,7 @@ class GroupAPI(SceneAPI):
 @dataclass(frozen=True, slots=True)
 class MessageAPI:
     _context: APIContext
-    message_id: MessageId
+    message_id: str
 
     async def fetch(self) -> Message:
         return await self._context.execute(FetchMessageAction(message_id=self.message_id))
@@ -215,7 +215,7 @@ class MessageAPI:
 @dataclass(frozen=True, slots=True)
 class FriendRequestAPI:
     _context: APIContext
-    request_id: RequestId
+    request_id: str
 
     async def approve(self) -> None:
         await self._context.execute(ApproveFriendRequestAction(request_id=self.request_id))
@@ -232,7 +232,7 @@ class FriendRequestAPI:
 @dataclass(frozen=True, slots=True)
 class GroupRequestAPI:
     _context: APIContext
-    request_id: RequestId
+    request_id: str
 
     async def approve(self) -> None:
         await self._context.execute(ApproveGroupRequestAction(request_id=self.request_id))
@@ -249,7 +249,7 @@ class GroupRequestAPI:
 @dataclass(frozen=True, slots=True)
 class FileAPI:
     _context: APIContext
-    file_id: FileId
+    file_id: str
 
     async def info(self) -> FileReference:
         return await self._context.execute(GetFileInfoAction(file_id=self.file_id))
@@ -277,25 +277,25 @@ class ClientAPI:
         self._context = context
 
     def scene(self, scene_type: SceneType, scene_id: IdInput) -> SceneAPI:
-        return SceneAPI(self._context, scene_type, SceneId(str(scene_id)))
+        return SceneAPI(self._context, scene_type, str(scene_id))
 
     def user(self, user_id: IdInput) -> UserAPI:
-        return UserAPI(self._context, SceneType.USER, SceneId(str(user_id)), UserId(str(user_id)))
+        return UserAPI(self._context, SceneType.USER, str(user_id), str(user_id))
 
     def group(self, group_id: IdInput) -> GroupAPI:
-        return GroupAPI(self._context, SceneType.GROUP, SceneId(str(group_id)), GroupId(str(group_id)))
+        return GroupAPI(self._context, SceneType.GROUP, str(group_id), str(group_id))
 
     def message(self, message_id: IdInput) -> MessageAPI:
-        return MessageAPI(self._context, MessageId(str(message_id)))
+        return MessageAPI(self._context, str(message_id))
 
     def friend_request(self, request_id: IdInput) -> FriendRequestAPI:
-        return FriendRequestAPI(self._context, RequestId(str(request_id)))
+        return FriendRequestAPI(self._context, str(request_id))
 
     def group_request(self, request_id: IdInput) -> GroupRequestAPI:
-        return GroupRequestAPI(self._context, RequestId(str(request_id)))
+        return GroupRequestAPI(self._context, str(request_id))
 
     def file(self, file_id: IdInput) -> FileAPI:
-        return FileAPI(self._context, FileId(str(file_id)))
+        return FileAPI(self._context, str(file_id))
 
     async def raw(self, action: str, params: Mapping[str, JsonValue] | None = None) -> RawResult:
         return await self._context.execute(RawAction(action=action, params=dict(params or {})))

@@ -3,7 +3,7 @@ from typing import ClassVar
 from pydantic import Field, JsonValue
 from typing_extensions import override
 
-from ..common import FileId, GroupId, MemberRole, MessageId, RequestId, SceneId, SceneType, UserId
+from ..common import MemberRole, SceneType
 from ..messages import Message
 from .base import Action
 from .formatting import format_actor, format_message, format_preview, format_scene, format_text, format_value
@@ -38,7 +38,7 @@ class RawAction(Action[RawResult]):
 
 class SendMessageAction(Action[SendResult]):
     scene_type: SceneType
-    scene_id: SceneId
+    scene_id: str
     message: Message
 
     @override
@@ -47,7 +47,7 @@ class SendMessageAction(Action[SendResult]):
 
 
 class RecallMessageAction(Action[None]):
-    message_id: MessageId
+    message_id: str
 
     @override
     def log_summary(self) -> str:
@@ -56,7 +56,7 @@ class RecallMessageAction(Action[None]):
 
 class FetchMessageAction(Action[Message]):
     log_level: ClassVar[str] = "TRACE"
-    message_id: MessageId
+    message_id: str
 
     @override
     def log_summary(self) -> str:
@@ -89,7 +89,7 @@ class GetVersionAction(Action[VersionInfo]):
 
 class GetUserProfileAction(Action[UserProfile]):
     log_level: ClassVar[str] = "TRACE"
-    user_id: UserId
+    user_id: str
 
     @override
     def log_summary(self) -> str:
@@ -106,7 +106,7 @@ class GetFriendListAction(Action[list[FriendInfo]]):
 
 class GetGroupProfileAction(Action[GroupProfile]):
     log_level: ClassVar[str] = "TRACE"
-    group_id: GroupId
+    group_id: str
 
     @override
     def log_summary(self) -> str:
@@ -123,8 +123,8 @@ class GetGroupListAction(Action[list[GroupProfile]]):
 
 class GetGroupMemberAction(Action[GroupMemberProfile]):
     log_level: ClassVar[str] = "TRACE"
-    group_id: GroupId
-    user_id: UserId
+    group_id: str
+    user_id: str
 
     @override
     def log_summary(self) -> str:
@@ -133,7 +133,7 @@ class GetGroupMemberAction(Action[GroupMemberProfile]):
 
 class GetGroupMemberListAction(Action[list[GroupMemberProfile]]):
     log_level: ClassVar[str] = "TRACE"
-    group_id: GroupId
+    group_id: str
 
     @override
     def log_summary(self) -> str:
@@ -141,8 +141,8 @@ class GetGroupMemberListAction(Action[list[GroupMemberProfile]]):
 
 
 class KickMemberAction(Action[None]):
-    group_id: GroupId
-    user_id: UserId
+    group_id: str
+    user_id: str
 
     @override
     def log_summary(self) -> str:
@@ -150,8 +150,8 @@ class KickMemberAction(Action[None]):
 
 
 class MuteMemberAction(Action[None]):
-    group_id: GroupId
-    user_id: UserId
+    group_id: str
+    user_id: str
     duration: int
 
     @override
@@ -160,8 +160,8 @@ class MuteMemberAction(Action[None]):
 
 
 class UnmuteMemberAction(Action[None]):
-    group_id: GroupId
-    user_id: UserId
+    group_id: str
+    user_id: str
 
     @override
     def log_summary(self) -> str:
@@ -169,8 +169,8 @@ class UnmuteMemberAction(Action[None]):
 
 
 class SetMemberRoleAction(Action[None]):
-    group_id: GroupId
-    user_id: UserId
+    group_id: str
+    user_id: str
     role: MemberRole
 
     @override
@@ -181,8 +181,8 @@ class SetMemberRoleAction(Action[None]):
 
 
 class SetMemberTitleAction(Action[None]):
-    group_id: GroupId
-    user_id: UserId
+    group_id: str
+    user_id: str
     title: str
 
     @override
@@ -194,8 +194,8 @@ class SetMemberTitleAction(Action[None]):
 
 
 class SetMemberCardAction(Action[None]):
-    group_id: GroupId
-    user_id: UserId
+    group_id: str
+    user_id: str
     card: str
 
     @override
@@ -206,7 +206,7 @@ class SetMemberCardAction(Action[None]):
 
 
 class SetGroupNameAction(Action[None]):
-    group_id: GroupId
+    group_id: str
     name: str
 
     @override
@@ -215,7 +215,7 @@ class SetGroupNameAction(Action[None]):
 
 
 class SetGroupMuteAction(Action[None]):
-    group_id: GroupId
+    group_id: str
     muted: bool
 
     @override
@@ -225,7 +225,7 @@ class SetGroupMuteAction(Action[None]):
 
 
 class LeaveGroupAction(Action[None]):
-    group_id: GroupId
+    group_id: str
 
     @override
     def log_summary(self) -> str:
@@ -233,7 +233,7 @@ class LeaveGroupAction(Action[None]):
 
 
 class ReactMessageAction(Action[None]):
-    message_id: MessageId
+    message_id: str
     reaction: str
     enabled: bool = True
 
@@ -244,7 +244,7 @@ class ReactMessageAction(Action[None]):
 
 
 class SetEssenceAction(Action[None]):
-    message_id: MessageId
+    message_id: str
     enabled: bool = True
 
     @override
@@ -255,8 +255,8 @@ class SetEssenceAction(Action[None]):
 
 class PokeAction(Action[None]):
     scene_type: SceneType
-    scene_id: SceneId
-    user_id: UserId
+    scene_id: str
+    user_id: str
 
     @override
     def log_summary(self) -> str:
@@ -264,7 +264,7 @@ class PokeAction(Action[None]):
 
 
 class ApproveFriendRequestAction(Action[None]):
-    request_id: RequestId
+    request_id: str
 
     @override
     def log_summary(self) -> str:
@@ -272,7 +272,7 @@ class ApproveFriendRequestAction(Action[None]):
 
 
 class RejectFriendRequestAction(Action[None]):
-    request_id: RequestId
+    request_id: str
     reason: str | None = None
 
     @override
@@ -282,7 +282,7 @@ class RejectFriendRequestAction(Action[None]):
 
 
 class ApproveGroupRequestAction(Action[None]):
-    request_id: RequestId
+    request_id: str
 
     @override
     def log_summary(self) -> str:
@@ -290,7 +290,7 @@ class ApproveGroupRequestAction(Action[None]):
 
 
 class RejectGroupRequestAction(Action[None]):
-    request_id: RequestId
+    request_id: str
     reason: str | None = None
 
     @override
@@ -301,7 +301,7 @@ class RejectGroupRequestAction(Action[None]):
 
 class GetFileInfoAction(Action[FileReference]):
     log_level: ClassVar[str] = "TRACE"
-    file_id: FileId
+    file_id: str
 
     @override
     def log_summary(self) -> str:
@@ -310,7 +310,7 @@ class GetFileInfoAction(Action[FileReference]):
 
 class DownloadFileAction(Action[FileUrl]):
     log_level: ClassVar[str] = "TRACE"
-    file_id: FileId
+    file_id: str
 
     @override
     def log_summary(self) -> str:
@@ -318,7 +318,7 @@ class DownloadFileAction(Action[FileUrl]):
 
 
 class SendLikeAction(Action[None]):
-    user_id: UserId
+    user_id: str
     times: int = 1
 
     @override

@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict, JsonValue
 from typing_extensions import override
 
-from ..common import FileId, GroupId, MemberRole, MessageId, UserId
+from ..common import MemberRole
 from ..messages import Message
 from .formatting import format_actor, format_message, format_text, format_url, format_value
 
@@ -14,7 +14,7 @@ class ResultModel(BaseModel):
 
 
 class SendResult(ResultModel):
-    message_id: MessageId
+    message_id: str
 
     @override
     def log_summary(self) -> str:
@@ -22,7 +22,7 @@ class SendResult(ResultModel):
 
 
 class UserProfile(ResultModel):
-    user_id: UserId
+    user_id: str
     display_name: str | None = None
     sex: str | None = None
     age: int | None = None
@@ -39,7 +39,7 @@ class UserProfile(ResultModel):
 
 
 class FriendInfo(ResultModel):
-    user_id: UserId
+    user_id: str
     display_name: str | None = None
 
     @override
@@ -48,7 +48,7 @@ class FriendInfo(ResultModel):
 
 
 class GroupProfile(ResultModel):
-    group_id: GroupId
+    group_id: str
     name: str
     member_count: int | None = None
     max_member_count: int | None = None
@@ -66,8 +66,8 @@ class GroupProfile(ResultModel):
 
 
 class GroupMemberProfile(ResultModel):
-    group_id: GroupId
-    user_id: UserId
+    group_id: str
+    user_id: str
     display_name: str | None = None
     card: str | None = None
     role: MemberRole | None = None
@@ -90,7 +90,7 @@ class FileUrl(ResultModel):
 
 
 class BotProfile(ResultModel):
-    user_id: UserId
+    user_id: str
     display_name: str
 
     @override
@@ -150,7 +150,7 @@ class RawResult(ResultModel):
 
 
 class FileReference(ResultModel):
-    file_id: FileId
+    file_id: str
     name: str | None = None
     url: str | None = None
 

@@ -5,12 +5,8 @@ from hyperot_adapter_onebot.events import OneBotHeartbeatEvent, OneBotHeartbeatS
 from typing_extensions import override
 
 from hyperot.v2.common import (
-    FileId,
     FileInfo,
-    MessageId,
-    SceneId,
     SceneType,
-    UserId,
     UserSnapshot,
 )
 from hyperot.v2.events import (
@@ -49,16 +45,16 @@ def test_message_event_is_compact_and_readable():
     event = MessageReceivedEvent(
         timestamp=datetime(2026, 9, 30, 12, 34, 56, tzinfo=UTC),
         scene_type=SceneType.GROUP,
-        scene_id=SceneId("100"),
-        user_id=UserId("200"),
-        message_id=MessageId("m1"),
+        scene_id="100",
+        user_id="200",
+        message_id="m1",
         message=Message(
-            Mention(user_id=UserId("123")),
+            Mention(user_id="123"),
             Text(text=" hello "),
             Image(source="https://example.com/a.png"),
         ),
         sender=UserSnapshot(
-            user_id=UserId("200"),
+            user_id="200",
             nick_name="nick",
             display_name="display",
         ),
@@ -70,16 +66,16 @@ def test_message_event_is_compact_and_readable():
 
 def test_extended_message_event_inherits_parent_formatting():
     class ExtendedMessageReceivedEvent(MessageReceivedEvent):
-        self_id: UserId
+        self_id: str
 
     event = ExtendedMessageReceivedEvent(
         scene_type=SceneType.GROUP,
-        scene_id=SceneId("100"),
-        user_id=UserId("200"),
-        message_id=MessageId("m1"),
+        scene_id="100",
+        user_id="200",
+        message_id="m1",
         message=Message(Text(text="hello")),
-        sender=UserSnapshot(user_id=UserId("200"), display_name="display"),
-        self_id=UserId("999"),
+        sender=UserSnapshot(user_id="200", display_name="display"),
+        self_id="999",
     )
 
     assert print_event(event) == ["[group] 100 @display: hello"]
@@ -88,23 +84,23 @@ def test_extended_message_event_inherits_parent_formatting():
 def test_other_events_use_short_summaries():
     recall = MessageRecalledEvent(
         scene_type=SceneType.GROUP,
-        scene_id=SceneId("100"),
-        user_id=UserId("200"),
-        message_id=MessageId("m1"),
-        operator_id=UserId("300"),
+        scene_id="100",
+        user_id="200",
+        message_id="m1",
+        operator_id="300",
     )
     joined = MemberJoinedEvent(
         scene_type=SceneType.GROUP,
-        scene_id=SceneId("100"),
-        user_id=UserId("200"),
-        member_id=UserId("200"),
-        inviter_id=UserId("300"),
+        scene_id="100",
+        user_id="200",
+        member_id="200",
+        inviter_id="300",
     )
     upload = FileUploadedEvent(
         scene_type=SceneType.GROUP,
-        scene_id=SceneId("100"),
-        user_id=UserId("200"),
-        file=FileInfo(file_id=FileId("f1"), name="archive.zip", size=42),
+        scene_id="100",
+        user_id="200",
+        file=FileInfo(file_id="f1", name="archive.zip", size=42),
     )
 
     assert print_event(recall) == ["[group] 100 @300 recalled message m1"]
@@ -126,9 +122,9 @@ def test_unknown_event_uses_compact_fallback():
 def test_message_text_escapes_control_characters():
     event = MessageReceivedEvent(
         scene_type=SceneType.GROUP,
-        scene_id=SceneId("100"),
-        user_id=UserId("200"),
-        message_id=MessageId("m1"),
+        scene_id="100",
+        user_id="200",
+        message_id="m1",
         message=Message(Text(text="line1\nline2\x1b[31m")),
     )
 

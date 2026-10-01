@@ -7,17 +7,11 @@ from typing import Any, ClassVar
 from pydantic import BaseModel, ConfigDict
 
 from hyperot.v2.common import (
-    FileId,
     FileInfo,
-    GroupId,
     MemberRole,
-    MessageId,
     ReactionKind,
     ReactionValue,
-    RequestId,
-    SceneId,
     SceneType,
-    UserId,
     UserSex,
     UserSnapshot,
 )
@@ -47,7 +41,7 @@ from hyperot.v2.messages import Mention, MentionAll, Message
 from .segments import OneBotSegmentCodec
 
 logger = Logger.fetch("hyperot.v2.events")
-MessageGroupLookup = Callable[[MessageId], GroupId | None]
+MessageGroupLookup = Callable[[str], str | None]
 
 
 def _id(value: object) -> str:
@@ -92,7 +86,7 @@ def _sex(value: object) -> UserSex | None:
             return None
 
 
-def _is_mentioned(message: Message, self_id: UserId) -> bool:
+def _is_mentioned(message: Message, self_id: str) -> bool:
     for segment in message:
         if isinstance(segment, MentionAll):
             return True
@@ -110,7 +104,7 @@ class OneBotAnonymousInfo(BaseModel):
 
 
 class OneBotMessageReceivedEvent(MessageReceivedEvent):
-    self_id: UserId
+    self_id: str
     sub_type: str | None = None
     raw_message: str | None = None
     font: int | None = None
@@ -126,7 +120,7 @@ class OneBotFileUploadedEvent(FileUploadedEvent):
 
 
 class OneBotGroupCardChangedEvent(SceneEvent):
-    member_id: UserId
+    member_id: str
     old_card: str | None = None
     new_card: str
 
@@ -142,12 +136,12 @@ class OneBotPokeReceivedEvent(PokeReceivedEvent):
 
 
 class OneBotLuckyKingEvent(SceneEvent):
-    sender_id: UserId
-    target_id: UserId
+    sender_id: str
+    target_id: str
 
 
 class OneBotHonorEvent(SceneEvent):
-    member_id: UserId
+    member_id: str
     honor_type: str
 
 
@@ -172,12 +166,12 @@ class OneBotHeartbeatEvent(Event):
 class OneBotReactionEvent(Event):
     log_enabled: ClassVar[bool] = False
 
-    message_id: MessageId
-    operator_id: UserId
+    message_id: str
+    operator_id: str
     reaction: ReactionValue
     added: bool
     count: int | None = None
-    group_id: GroupId | None = None
+    group_id: str | None = None
 
 
 def translate_event(
@@ -206,9 +200,9 @@ def translate_event(
     if post_type == "message":
         message_type = data.get("message_type")
         scene_type = SceneType.USER if message_type == "private" else SceneType.GROUP
-        scene_id = SceneId(_id(data.get("user_id") if scene_type == SceneType.USER else data.get("group_id")))
-        user_id = UserId(_id(data.get("user_id", 0)))
-        self_id = UserId(_id(data.get("self_id", 0)))
+        scene_id = _id(data.get("user_id") if scene_type == SceneType.USER else data.get("group_id"))
+        user_id = _id(data.get("user_id", 0))
+        self_id = _id(data.get("self_id", 0))
         message_payload = data.get("message", [])
         if not isinstance(message_payload, list):
             logger.warning("OneBot message event rejected: message must be an array")
@@ -221,10 +215,10 @@ def translate_event(
             scene_type=scene_type,
             scene_id=scene_id,
             user_id=user_id,
-            message_id=MessageId(_id(data.get("message_id", ""))),
+            message_id=_id(data.get("message_id", "")),
             message=message,
             sender=UserSnapshot(
-                user_id=UserId(_id(sender_data.get("user_id", user_id))),
+                user_id=_id(sender_data.get("user_id", user_id)),
                 nick_name=sender_data.get("nickname"),
                 display_name=sender_data.get("card") or sender_data.get("nickname"),
                 sex=_sex(sender_data.get("sex")),
@@ -265,11 +259,11 @@ def _translate_notice(
 ) -> Event | None:
     notice_type = data.get("notice_type")
     timestamp = _timestamp(data.get("time"))
-    user_id = UserId(_id(data.get("user_id", 0)))
-    group_id = GroupId(_id(data.get("group_id", 0)))
+    user_id = _id(data.get("user_id", 0))
+    group_id = _id(data.get("group_id", 0))
     scene = {
         "scene_type": SceneType.GROUP,
-        "scene_id": SceneId(str(group_id)),
+        "scene_id": str(group_id),
         "user_id": user_id,
         "timestamp": timestamp,
     }
@@ -279,14 +273,14 @@ def _translate_notice(
             return MessageRecalledEvent(
                 timestamp=timestamp,
                 scene_type=SceneType.USER,
-                scene_id=SceneId(str(user_id)),
+                scene_id=str(user_id),
                 user_id=user_id,
-                message_id=MessageId(_id(data.get("message_id", ""))),
+                message_id=_id(data.get("message_id", "")),
             )
         return MessageRecalledEvent(
             **scene,
-            message_id=MessageId(_id(data.get("message_id", ""))),
-            operator_id=UserId(_id(data["operator_id"])) if data.get("operator_id") else None,
+            message_id=_id(data.get("message_id", "")),
+            operator_id=_id(data["operator_id"]) if data.get("operator_id") else None,
         )
 
     if notice_type == "group_admin":
@@ -302,15 +296,15 @@ def _translate_notice(
         return MemberJoinedEvent(
             **scene,
             member_id=user_id,
-            operator_id=UserId(_id(data["operator_id"])) if data.get("operator_id") else None,
-            inviter_id=UserId(_id(data["operator_id"])) if data.get("sub_type") == "invite" else None,
+            operator_id=_id(data["operator_id"]) if data.get("operator_id") else None,
+            inviter_id=_id(data["operator_id"]) if data.get("sub_type") == "invite" else None,
         )
 
     if notice_type == "group_decrease":
         return OneBotMemberLeftEvent(
             **scene,
             member_id=user_id,
-            operator_id=UserId(_id(data["operator_id"])) if data.get("operator_id") else None,
+            operator_id=_id(data["operator_id"]) if data.get("operator_id") else None,
             kicked=data.get("sub_type") in {"kick", "kick_me"},
             sub_type=data.get("sub_type"),
             self_kicked=data.get("sub_type") == "kick_me",
@@ -322,7 +316,7 @@ def _translate_notice(
         return MemberMuteChangedEvent(
             **scene,
             member_id=user_id,
-            operator_id=UserId(_id(data["operator_id"])) if data.get("operator_id") else None,
+            operator_id=_id(data["operator_id"]) if data.get("operator_id") else None,
             muted=muted,
             duration=int(duration) if muted and duration is not None else None,
         )
@@ -332,7 +326,7 @@ def _translate_notice(
             **scene,
             muted=bool(data.get("is_mute", data.get("sub_type") == "mute")),
             duration=int(data["duration"]) if data.get("duration") is not None else None,
-            operator_id=UserId(_id(data["operator_id"])) if data.get("operator_id") else None,
+            operator_id=_id(data["operator_id"]) if data.get("operator_id") else None,
         )
 
     if notice_type == "group_name_change":
@@ -340,7 +334,7 @@ def _translate_notice(
             **scene,
             old_name=data.get("old_group_name"),
             new_name=str(data.get("new_group_name", "")),
-            operator_id=UserId(_id(data["operator_id"])) if data.get("operator_id") else None,
+            operator_id=_id(data["operator_id"]) if data.get("operator_id") else None,
         )
 
     if notice_type == "group_card":
@@ -358,10 +352,10 @@ def _translate_notice(
         return OneBotFileUploadedEvent(
             timestamp=timestamp,
             scene_type=scene_type,
-            scene_id=SceneId(str(scene_id)),
+            scene_id=str(scene_id),
             user_id=user_id,
             file=FileInfo(
-                file_id=FileId(_id(file_data.get("id", file_data.get("file_id", "")))),
+                file_id=_id(file_data.get("id", file_data.get("file_id", ""))),
                 name=str(file_data.get("name", file_data.get("file_name", ""))),
                 size=int(file_data.get("size") or file_data.get("file_size") or 0),
             ),
@@ -374,15 +368,15 @@ def _translate_notice(
             return OneBotPokeReceivedEvent(
                 timestamp=timestamp,
                 scene_type=SceneType.USER,
-                scene_id=SceneId(str(user_id)),
+                scene_id=str(user_id),
                 user_id=user_id,
-                target_id=UserId(_id(data.get("target_id", 0))),
+                target_id=_id(data.get("target_id", 0)),
                 poke_type=data.get("type"),
                 poke_id=data.get("id"),
             )
         return OneBotPokeReceivedEvent(
             **scene,
-            target_id=UserId(_id(data.get("target_id", 0))),
+            target_id=_id(data.get("target_id", 0)),
             poke_type=data.get("type"),
             poke_id=data.get("id"),
         )
@@ -391,7 +385,7 @@ def _translate_notice(
         return OneBotLuckyKingEvent(
             **scene,
             sender_id=user_id,
-            target_id=UserId(_id(data.get("target_id", 0))),
+            target_id=_id(data.get("target_id", 0)),
         )
 
     if notice_type == "notify" and data.get("sub_type") == "honor":
@@ -404,8 +398,8 @@ def _translate_notice(
     if notice_type == "essence":
         return EssenceChangedEvent(
             **scene,
-            message_id=MessageId(_id(data.get("message_id", ""))),
-            operator_id=UserId(_id(data["operator_id"])) if data.get("operator_id") else None,
+            message_id=_id(data.get("message_id", "")),
+            operator_id=_id(data["operator_id"]) if data.get("operator_id") else None,
             added=data.get("sub_type") == "add",
         )
 
@@ -415,7 +409,7 @@ def _translate_notice(
         reaction_kind = (
             ReactionKind.EMOJI if reaction_type == "emoji" or not code.lstrip("-").isdigit() else ReactionKind.FACE
         )
-        message_id = MessageId(_id(data.get("message_id", "")))
+        message_id = _id(data.get("message_id", ""))
         group_id = data.get("group_id")
         if not _has_group(group_id) and message_group_lookup is not None:
             group_id = message_group_lookup(message_id)
@@ -424,7 +418,7 @@ def _translate_notice(
             return OneBotReactionEvent(
                 timestamp=timestamp,
                 message_id=message_id,
-                operator_id=UserId(_id(data.get("operator_id") or data.get("user_id", 0))),
+                operator_id=_id(data.get("operator_id") or data.get("user_id", 0)),
                 reaction=ReactionValue(kind=reaction_kind, value=code),
                 added=data.get("sub_type") == "add",
                 count=int(data["count"]) if data.get("count") is not None else None,
@@ -432,8 +426,8 @@ def _translate_notice(
         return MessageReactionChangedEvent(
             timestamp=timestamp,
             scene_type=SceneType.GROUP,
-            scene_id=SceneId(str(group_id)),
-            user_id=UserId(_id(data.get("operator_id") or data.get("user_id", 0))),
+            scene_id=str(group_id),
+            user_id=_id(data.get("operator_id") or data.get("user_id", 0)),
             message_id=message_id,
             reaction=ReactionValue(
                 kind=reaction_kind,
@@ -446,7 +440,7 @@ def _translate_notice(
     if notice_type == "friend_add":
         return FriendAddedEvent(
             timestamp=timestamp,
-            user_id=UserId(_id(data.get("user_id", 0))),
+            user_id=_id(data.get("user_id", 0)),
         )
 
     return None
@@ -455,8 +449,8 @@ def _translate_notice(
 def _translate_request(data: dict[str, Any]) -> Event | None:
     request_type = data.get("request_type")
     timestamp = _timestamp(data.get("time"))
-    user_id = UserId(_id(data.get("user_id", 0)))
-    request_id = RequestId(_id(data.get("flag", "")))
+    user_id = _id(data.get("user_id", 0))
+    request_id = _id(data.get("flag", ""))
     comment = data.get("comment")
     if request_type == "friend":
         return FriendRequestedEvent(
@@ -466,13 +460,13 @@ def _translate_request(data: dict[str, Any]) -> Event | None:
             comment=comment,
         )
     if request_type == "group":
-        group_id = GroupId(_id(data.get("group_id", 0)))
+        group_id = _id(data.get("group_id", 0))
         sub_type = data.get("sub_type")
         if sub_type == "invite":
             return GroupInvitationReceivedEvent(
                 timestamp=timestamp,
                 scene_type=SceneType.GROUP,
-                scene_id=SceneId(str(group_id)),
+                scene_id=str(group_id),
                 user_id=user_id,
                 request_id=request_id,
                 inviter_id=user_id,
@@ -480,7 +474,7 @@ def _translate_request(data: dict[str, Any]) -> Event | None:
         return GroupJoinRequestedEvent(
             timestamp=timestamp,
             scene_type=SceneType.GROUP,
-            scene_id=SceneId(str(group_id)),
+            scene_id=str(group_id),
             user_id=user_id,
             request_id=request_id,
             inviter_id=None,

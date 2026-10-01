@@ -1,14 +1,8 @@
 from .api import ClientAPI
 from .client import Client
 from .common import (
-    FileId,
-    GroupId,
     MemberRole,
-    MessageId,
-    RequestId,
-    SceneId,
     SceneType,
-    UserId,
 )
 from .events import (
     BotOfflineEvent,
@@ -32,12 +26,15 @@ from .messages import (
     Message,
     Quote,
     Segment,
+    SegmentDecoder,
+    SegmentEncoder,
+    SegmentRegistry,
     Text,
     UnknownSegment,
     Video,
 )
 
-__version__ = "2.0.0"
+__version__ = "2.0.1"
 
 __all__ = [
     "Audio",
@@ -50,26 +47,23 @@ __all__ = [
     "Event",
     "Face",
     "File",
-    "FileId",
     "Forward",
     "ForwardNode",
-    "GroupId",
     "Image",
     "Markdown",
     "MemberRole",
     "Mention",
     "MentionAll",
     "Message",
-    "MessageId",
     "MessageReceivedEvent",
     "Quote",
-    "RequestId",
     "SceneEvent",
-    "SceneId",
     "SceneType",
     "Segment",
+    "SegmentDecoder",
+    "SegmentEncoder",
+    "SegmentRegistry",
     "Text",
     "UnknownSegment",
-    "UserId",
     "Video",
 ]

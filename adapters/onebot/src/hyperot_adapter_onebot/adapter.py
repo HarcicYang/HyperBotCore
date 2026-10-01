@@ -14,7 +14,7 @@ from hyperot.v2.adapter import (
     ExtensionRegistry,
     load_manifest,
 )
-from hyperot.v2.common import FileId, GroupId, MessageId, SceneType
+from hyperot.v2.common import SceneType
 from hyperot.v2.events import Event, GroupInvitationReceivedEvent, GroupJoinRequestedEvent
 
 from .actions import OneBotActions
@@ -51,7 +51,7 @@ class OneBotAdapter:
         self._transports: list[ActionTransport] = []
         self._action_transport: ActionTransport | None = None
         self._running = False
-        self._message_groups: OrderedDict[str, GroupId] = OrderedDict()
+        self._message_groups: OrderedDict[str, str] = OrderedDict()
         self._request_subtypes: OrderedDict[str, str] = OrderedDict()
         self._file_context: OrderedDict[str, dict[str, JsonValue]] = OrderedDict()
 
@@ -130,13 +130,13 @@ class OneBotAdapter:
             raise RuntimeError("OneBot adapter has no action transport")
         return self._action_transport
 
-    def _remember_message_group(self, message_id: MessageId, group_id: GroupId) -> None:
+    def _remember_message_group(self, message_id: str, group_id: str) -> None:
         self._message_groups[str(message_id)] = group_id
         self._message_groups.move_to_end(str(message_id))
         while len(self._message_groups) > 8192:
             self._message_groups.popitem(last=False)
 
-    def _message_group_lookup(self, message_id: MessageId) -> GroupId | None:
+    def _message_group_lookup(self, message_id: str) -> str | None:
         group_id = self._message_groups.get(str(message_id))
         if group_id is not None:
             self._message_groups.move_to_end(str(message_id))
@@ -154,7 +154,7 @@ class OneBotAdapter:
             self._request_subtypes.move_to_end(request_id)
         return sub_type
 
-    def _remember_file_context(self, file_id: FileId, **values: JsonValue) -> None:
+    def _remember_file_context(self, file_id: str, **values: JsonValue) -> None:
         key = str(file_id)
         context = self._file_context.setdefault(key, {})
         context.update({name: value for name, value in values.items() if value is not None})
@@ -162,7 +162,7 @@ class OneBotAdapter:
         while len(self._file_context) > 4096:
             self._file_context.popitem(last=False)
 
-    def _file_context_lookup(self, file_id: FileId) -> dict[str, JsonValue] | None:
+    def _file_context_lookup(self, file_id: str) -> dict[str, JsonValue] | None:
         context = self._file_context.get(str(file_id))
         if context is not None:
             self._file_context.move_to_end(str(file_id))
@@ -172,7 +172,7 @@ class OneBotAdapter:
     def _remember_event_context(self, event: Event) -> None:
         if isinstance(event, OneBotMessageReceivedEvent):
             if event.scene_type == SceneType.GROUP:
-                self._remember_message_group(event.message_id, GroupId(str(event.scene_id)))
+                self._remember_message_group(event.message_id, str(event.scene_id))
             for segment in event.message:
                 if isinstance(segment, OneBotFile) and segment.file_id is not None:
                     self._remember_file_context(segment.file_id, file_hash=segment.file_hash)
