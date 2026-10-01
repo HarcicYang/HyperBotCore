@@ -103,7 +103,9 @@ class RuntimeSupervisor:
                     attempt += 1
                     if self._retry_exhausted(attempt):
                         self._terminal_error = exc
-                        self._logger.error(f"adapter connection failed permanently after {attempt} attempts: {exc}")
+                        self._logger.error(
+                            f"adapter connection failed permanently after {attempt} attempts: {exc};{self._retry_hint()}"
+                        )
                         self._running = False
                         return
                     self._logger.warning(
@@ -116,7 +118,7 @@ class RuntimeSupervisor:
                     if self._retry_exhausted(attempt):
                         self._terminal_error = exc
                         self._logger.log(
-                            f"runtime connection failed permanently after {attempt} attempts",
+                            f"runtime connection failed permanently after {attempt} attempts:{self._retry_hint()}",
                             "ERROR",
                             exc_info=True,
                         )
@@ -149,3 +151,9 @@ class RuntimeSupervisor:
         if limit is None:
             return f" (attempt {attempt})"
         return f" (attempt {attempt}/{limit})"
+
+    def _retry_hint(self) -> str:
+        limit = self._config.reconnect_max_attempts
+        if limit is None:
+            return ""
+        return " set runtime.reconnect_max_attempts to null to keep retrying"

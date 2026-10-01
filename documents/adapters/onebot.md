@@ -242,6 +242,30 @@ await client.api.file(file_id).download()
 
 ## 常见问题
 
+### 启动时连接被拒绝
+
+先确认 OneBot 实现已经在监听配置里的地址，再启动机器人。连接失败时框架会按 `runtime.reconnect_max_attempts` 重试，日志形如：
+
+```text
+Warning  adapter connection failed: OneBot websocket connection to ws://127.0.0.1:5004 failed: connection refused (check that the OneBot end is running and listening on 127.0.0.1:5004); retrying in 1.0s (attempt 1/5)
+```
+
+错误信息会带上具体地址和失败原因，方便直接定位：权限不足、域名解析失败、证书问题、握手被拒绝（401 表示 `access_token` 不一致）会分别给出对应提示。
+
+重试用尽后 `run()` 退出并抛出 `AdapterConnectionError`。希望一直等到协议端上线，把 `runtime.reconnect_max_attempts` 设为 `null`。
+
+### 监听端口启动失败
+
+反向 WebSocket 和 HTTPPost 需要框架自己监听端口。启动前框架会先确认地址可以监听，端口被占用时日志会直接指出地址：
+
+```text
+Error  OneBot listener on 127.0.0.1:6701 failed: address already in use (another process is already listening on 127.0.0.1:6701)
+```
+
+权限不足（例如使用 80 之类的低位端口）会提示 `not allowed to listen on`。
+
+换一个 `port`，或者先停掉占用该端口的进程。这类失败同样会按 `runtime.reconnect_max_attempts` 重试，不会直接让进程退出。
+
 ### 连接成功但收不到消息
 
 检查 OneBot 实现是否真的把事件推送到了当前连接。正向 WebSocket 通常需要协议端启用 WebSocket 服务；HTTPPost 需要确认上报地址。
@@ -253,6 +277,15 @@ await client.api.file(file_id).download()
 ### 反向 WebSocket 连不上
 
 确认 OneBot 实现连接的是框架监听的 `host` 和 `port`。如果使用 Universal，确认协议端发送了正确的连接角色。
+
+连接被拒绝时框架会留下日志，说明是哪一条规则拦住的：
+
+```text
+Warning  rejected OneBot reverse websocket: access_token mismatch
+Warning  rejected OneBot reverse websocket: unknown connection role
+```
+
+出现 `unknown connection role` 时，确认协议端发送了正确的 `X-Client-Role`（`API`、`Event` 或 `Universal`），并且连的是 `/api`、`/event` 或根路径。
 
 ### 收到字符串消息事件被拒绝
 

@@ -48,10 +48,11 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
-适配器单独安装。例如使用 OneBot v11：
+适配器单独安装。例如使用 OneBot v11 或 Milky：
 
 ```shell
 pip install hyper-bot hyperot-adapter-onebot
+pip install hyper-bot hyperot-adapter-milky
 ```
 
 具体安装、连接配置和扩展能力见[适配器文档](./documents/adapters/index.md)。

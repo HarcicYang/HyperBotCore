@@ -42,6 +42,7 @@ dev = [
     "ruff>=0.16.1",
     "pyrefly>=1.2.0",
     "hyperot-adapter-onebot",
+    "hyperot-adapter-milky",
 ]
 
 [tool.pytest.ini_options]
@@ -52,8 +53,9 @@ markers = [
 ]
 
 [tool.uv.workspace]
-members = ["adapters/onebot"]
+members = ["adapters/onebot", "adapters/milky"]
 
 [tool.uv.sources]
 hyper-bot = { workspace = true }
 hyperot-adapter-onebot = { workspace = true }
+hyperot-adapter-milky = { workspace = true }

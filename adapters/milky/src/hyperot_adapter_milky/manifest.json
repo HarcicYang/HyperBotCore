@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "id": "milky",
+  "name": "Milky Protocol Adapter",
+  "package": "hyperot_adapter_milky",
+  "version": "2.0.1",
+  "api_version": 2,
+  "requires_hyperot": ">=2,<3",
+  "entrypoint": "hyperot_adapter_milky:create_adapter",
+  "protocol": "milky",
+  "platforms": ["qq"]
+}

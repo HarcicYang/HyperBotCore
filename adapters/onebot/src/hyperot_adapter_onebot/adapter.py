@@ -71,6 +71,7 @@ class OneBotAdapter:
             for transport in reversed(started):
                 with suppress(Exception):
                     await transport.stop()
+            self._transports.clear()
             raise
         self._action_transport = next(
             (transport for transport in self._transports if not isinstance(transport, HTTPPostTransport)),

@@ -1,3 +1,4 @@
+from .connection import bind_error, connection_error, describe
 from .enums import MemberRole, ReactionKind, SceneType, UserSex
 from .errors import (
     ActionError,
@@ -37,4 +38,7 @@ __all__ = [
     "SceneType",
     "UserSex",
     "UserSnapshot",
+    "bind_error",
+    "connection_error",
+    "describe",
 ]

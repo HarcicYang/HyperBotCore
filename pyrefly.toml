@@ -1,8 +1,9 @@
+project-includes = ["src", "adapters/onebot/src", "adapters/milky/src"]
+project-excludes = ["logic.py"]
+search-path = ["src", "adapters/onebot/src", "adapters/milky/src"]
+
 preset = "strict"
 python-version = "3.11"
-project-includes = ["src", "adapters/onebot/src"]
-project-excludes = ["logic.py"]
-search-path = ["src", "adapters/onebot/src"]
 
 [errors]
 # 存量代码缺类型注解/泛型参数的噪音，暂不补注解，静音处理

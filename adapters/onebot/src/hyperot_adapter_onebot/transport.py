@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import hmac
 import json
+import socket
 import uuid
 from contextlib import suppress
 from typing import Any, Protocol, cast
@@ -20,7 +21,10 @@ from hyperot.v2.common import (
     ActionTimeoutError,
     AdapterConnectionError,
     AdapterDisconnectedError,
+    bind_error,
+    connection_error,
 )
+from hyperot.v2.hyperogger import Logger
 
 from .config import (
     ForwardWebSocketConfig,
@@ -29,6 +33,29 @@ from .config import (
     OneBotConnectionConfig,
     ReverseWebSocketConfig,
 )
+
+
+def _bind_conflict(host: str, port: int) -> OSError | None:
+    """Return the error uvicorn would hit while binding, before it can exit the process.
+
+    uvicorn calls ``sys.exit`` when it cannot bind, which tears the event loop down before
+    the waiting coroutine can report anything, so the address is checked here first.
+    """
+    try:
+        infos = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+    except OSError as exc:
+        return exc
+    conflict: OSError | None = None
+    for family, kind, proto, _canonname, address in infos:
+        try:
+            with socket.socket(family, kind, proto) as probe:
+                probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                probe.bind(address)
+                probe.listen(1)
+            return None
+        except OSError as exc:
+            conflict = exc
+    return conflict
 
 
 class ActionTransport(Protocol):
@@ -83,8 +110,14 @@ class ForwardWebSocketTransport(_PendingMixin):
                 ping_interval=self.config.ping_interval,
                 ping_timeout=self.config.ping_timeout,
             )
-        except OSError as exc:
-            raise AdapterConnectionError(str(exc)) from exc
+        # Anything raised here means the OneBot end never answered.
+        except Exception as exc:
+            raise connection_error(
+                exc,
+                label="OneBot",
+                target=self.config.url,
+                kind="websocket connection",
+            ) from exc
         self._reader_task = asyncio.create_task(self._reader())
 
     async def stop(self) -> None:
@@ -132,8 +165,9 @@ class ForwardWebSocketTransport(_PendingMixin):
         except asyncio.CancelledError:
             raise
         except Exception as exc:  # noqa: BLE001
-            self._fail_pending(AdapterDisconnectedError(str(exc)))
-            await self._events.put(AdapterDisconnectedError(str(exc)))
+            dropped = AdapterDisconnectedError(f"OneBot websocket {self.config.url} closed: {exc}")
+            self._fail_pending(dropped)
+            await self._events.put(dropped)
 
 
 class HTTPTransport:
@@ -161,7 +195,8 @@ class HTTPTransport:
                 timeout=timeout,
             )
         except httpx.HTTPError as exc:
-            raise AdapterConnectionError(str(exc)) from exc
+            target = f"{self.config.url.rstrip('/')}/{action}"
+            raise connection_error(exc, label="OneBot", target=target, kind="HTTP action call") from exc
         try:
             data = response.json()
         except ValueError as exc:
@@ -182,15 +217,25 @@ class _ServerTransport:
         self.task: asyncio.Task[None] | None = None
         self.events: asyncio.Queue[dict[str, Any] | BaseException] = asyncio.Queue()
 
-    async def _start_server(self, app: FastAPI) -> None:
+    async def _start_server(self, app: FastAPI, *, label: str, kind: str) -> None:
+        target = f"{self.host}:{self.port}"
+        if (conflict := _bind_conflict(self.host, self.port)) is not None:
+            raise bind_error(conflict, label=label, target=target) from conflict
         config = uvicorn.Config(app, host=self.host, port=self.port, log_level="warning", log_config=None)
         self.server = uvicorn.Server(config)
         self.task = asyncio.create_task(self.server.serve())
         for _ in range(200):
+            if self.task.done():
+                error = self.task.exception()
+                self.task = None
+                self.server = None
+                if error is None:
+                    raise AdapterConnectionError(f"OneBot {kind} listener on {target} stopped early")
+                raise bind_error(error, label=label, target=target) from error
             if self.server.started:
                 return
             await asyncio.sleep(0.01)
-        raise AdapterConnectionError("OneBot callback server failed to start")
+        raise AdapterConnectionError(f"OneBot {kind} listener on {target} failed to start in time")
 
     async def stop(self) -> None:
         if self.server is not None:
@@ -233,7 +278,7 @@ class HTTPPostTransport(_ServerTransport):
             return Response(status_code=204)
 
     async def start(self) -> None:
-        await self._start_server(self.app)
+        await self._start_server(self.app, label="OneBot", kind="HTTPPost callback")
 
     async def call(self, action: str, params: dict[str, Any], timeout: float) -> dict[str, Any]:
         raise AdapterConnectionError(f"HTTPPost transport cannot execute action: {action}")
@@ -258,7 +303,7 @@ class ReverseWebSocketTransport(_PendingMixin, _ServerTransport):
             elif role == "Universal":
                 await self._run_universal(websocket)
             else:
-                await websocket.close(code=1008)
+                await self._reject(websocket, "unknown connection role")
 
         @self.app.websocket(config.api_path)
         async def api_endpoint(websocket: WebSocket) -> None:
@@ -281,7 +326,7 @@ class ReverseWebSocketTransport(_PendingMixin, _ServerTransport):
                 await self._run_event(websocket)
 
     async def start(self) -> None:
-        await self._start_server(self.app)
+        await self._start_server(self.app, label="OneBot", kind="reverse websocket")
 
     @override
     async def stop(self) -> None:
@@ -316,9 +361,14 @@ class ReverseWebSocketTransport(_PendingMixin, _ServerTransport):
             or websocket.query_params.get("access_token") == self.config.access_token
         )
 
+    async def _reject(self, websocket: WebSocket, reason: str) -> None:
+        # Closing 1008 is invisible to the protocol end, so say why in the log instead.
+        Logger.fetch("hyperot.v2.adapter.onebot").warning(f"rejected OneBot reverse websocket: {reason}")
+        await websocket.close(code=1008)
+
     async def _run_api(self, websocket: WebSocket) -> None:
         if not self._authorized(websocket):
-            await websocket.close(code=1008)
+            await self._reject(websocket, "access_token mismatch")
             return
         await websocket.accept()
         old = self._api_ws
@@ -341,7 +391,7 @@ class ReverseWebSocketTransport(_PendingMixin, _ServerTransport):
 
     async def _run_event(self, websocket: WebSocket) -> None:
         if not self._authorized(websocket):
-            await websocket.close(code=1008)
+            await self._reject(websocket, "access_token mismatch")
             return
         await websocket.accept()
         try:
@@ -354,7 +404,7 @@ class ReverseWebSocketTransport(_PendingMixin, _ServerTransport):
 
     async def _run_universal(self, websocket: WebSocket) -> None:
         if not self._authorized(websocket):
-            await websocket.close(code=1008)
+            await self._reject(websocket, "access_token mismatch")
             return
         await websocket.accept()
         old = self._api_ws
