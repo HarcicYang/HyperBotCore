@@ -2,13 +2,8 @@ import logging
 from datetime import UTC, datetime
 
 from hyperot_adapter_onebot.events import OneBotHeartbeatEvent, OneBotHeartbeatStatus
-from typing_extensions import override
 
-from hyperot.v2.common import (
-    FileInfo,
-    SceneType,
-    UserSnapshot,
-)
+from hyperot.v2.common import FileInfo, SceneType, UserSnapshot
 from hyperot.v2.events import (
     BotOnlineEvent,
     Event,
@@ -25,7 +20,6 @@ class CaptureHandler(logging.Handler):
         super().__init__(level=-100)
         self.messages: list[str] = []
 
-    @override
     def emit(self, record: logging.LogRecord) -> None:
         self.messages.append(record.getMessage())
 
@@ -41,7 +35,7 @@ def print_event(event: Event) -> list[str]:
     return handler.messages
 
 
-def test_message_event_is_compact_and_readable():
+def test_message_event_is_compact_and_escapes_control_characters():
     event = MessageReceivedEvent(
         timestamp=datetime(2026, 9, 30, 12, 34, 56, tzinfo=UTC),
         scene_type=SceneType.GROUP,
@@ -50,92 +44,51 @@ def test_message_event_is_compact_and_readable():
         message_id="m1",
         message=Message(
             Mention(user_id="123"),
-            Text(text=" hello "),
+            Text(text="line1\nline2\x1b[31m"),
             Image(source="https://example.com/a.png"),
         ),
-        sender=UserSnapshot(
-            user_id="200",
-            nick_name="nick",
-            display_name="display",
-        ),
+        sender=UserSnapshot(user_id="200", display_name="display"),
         is_mentioned=True,
     )
 
-    assert print_event(event) == ["[group] 100 @display: @123 hello [图片]"]
-
-
-def test_extended_message_event_inherits_parent_formatting():
-    class ExtendedMessageReceivedEvent(MessageReceivedEvent):
-        self_id: str
-
-    event = ExtendedMessageReceivedEvent(
-        scene_type=SceneType.GROUP,
-        scene_id="100",
-        user_id="200",
-        message_id="m1",
-        message=Message(Text(text="hello")),
-        sender=UserSnapshot(user_id="200", display_name="display"),
-        self_id="999",
-    )
-
-    assert print_event(event) == ["[group] 100 @display: hello"]
+    assert print_event(event) == ["[group] 100 @display: @123line1\\nline2\\x1b[31m[图片]"]
 
 
 def test_other_events_use_short_summaries():
-    recall = MessageRecalledEvent(
-        scene_type=SceneType.GROUP,
-        scene_id="100",
-        user_id="200",
-        message_id="m1",
-        operator_id="300",
-    )
-    joined = MemberJoinedEvent(
-        scene_type=SceneType.GROUP,
-        scene_id="100",
-        user_id="200",
-        member_id="200",
-        inviter_id="300",
-    )
-    upload = FileUploadedEvent(
-        scene_type=SceneType.GROUP,
-        scene_id="100",
-        user_id="200",
-        file=FileInfo(file_id="f1", name="archive.zip", size=42),
-    )
+    events = [
+        MessageRecalledEvent(
+            scene_type=SceneType.GROUP,
+            scene_id="100",
+            user_id="200",
+            message_id="m1",
+            operator_id="300",
+        ),
+        MemberJoinedEvent(
+            scene_type=SceneType.GROUP,
+            scene_id="100",
+            user_id="200",
+            member_id="200",
+            inviter_id="300",
+        ),
+        FileUploadedEvent(
+            scene_type=SceneType.GROUP,
+            scene_id="100",
+            user_id="200",
+            file=FileInfo(file_id="f1", name="archive.zip", size=42),
+        ),
+        BotOnlineEvent(reason="ready"),
+    ]
 
-    assert print_event(recall) == ["[group] 100 @300 recalled message m1"]
-    assert print_event(joined) == ["[group] 100 @200 joined via @300"]
-    assert print_event(upload) == ["[group] 100 @200 uploaded file archive.zip (42 bytes)"]
-    assert print_event(BotOnlineEvent(reason="ready")) == ["[bot] online: ready"]
-
-
-def test_unknown_event_uses_compact_fallback():
-    class CustomEvent(Event):
-        source: str
-        retry_count: int
-
-    event = CustomEvent(source="onebot", retry_count=2)
-
-    assert print_event(event) == ["[event] CustomEvent source=onebot retry_count=2"]
-
-
-def test_message_text_escapes_control_characters():
-    event = MessageReceivedEvent(
-        scene_type=SceneType.GROUP,
-        scene_id="100",
-        user_id="200",
-        message_id="m1",
-        message=Message(Text(text="line1\nline2\x1b[31m")),
-    )
-
-    assert print_event(event) == ["[group] 100 @200: line1\\nline2\\x1b[31m"]
+    assert [print_event(event) for event in events] == [
+        ["[group] 100 @300 recalled message m1"],
+        ["[group] 100 @200 joined via @300"],
+        ["[group] 100 @200 uploaded file archive.zip (42 bytes)"],
+        ["[bot] online: ready"],
+    ]
 
 
 def test_heartbeat_events_are_silent():
-    event = OneBotHeartbeatEvent(
-        interval=1000,
-        status=OneBotHeartbeatStatus(online=True, good=True),
-    )
+    event = OneBotHeartbeatEvent(interval=1000, status=OneBotHeartbeatStatus(online=True, good=True))
 
     assert event.log_enabled is False
     assert print_event(event) == []

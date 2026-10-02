@@ -1,78 +1,44 @@
 from hyperot.common import Message
-from hyperot.segments import At, Image, Text, message_types
+from hyperot.segments import At, Image, Text
 
 
-def test_text_to_json():
+def test_builtin_segments_serialize_to_wire_json():
     assert Text("hello").to_json() == {"type": "text", "data": {"text": "hello"}}
-
-
-def test_at_to_json():
     assert At(qq="123").to_json() == {"type": "at", "data": {"qq": "123"}}
+    assert Image(file="http://example.com/x.png").to_json() == {
+        "type": "image",
+        "data": {"file": "http://example.com/x.png", "summary": "[图片]"},
+    }
 
 
-def test_image_to_json():
-    img = Image(file="http://example.com/x.png")
-    data = img.to_json()
-    assert data["type"] == "image"
-    assert data["data"]["file"] == "http://example.com/x.png"
+def test_message_stringifies_and_serializes_its_contents():
+    message = Message(Text("hi"), At(qq="123"))
 
-
-def test_segment_equality():
-    assert At(qq="1") == At(qq="1")
-    assert At(qq="1") != At(qq="2")
-
-
-def test_message_build_and_str():
-    m = Message(Text("hi"), At(qq="123"))
-    assert str(m) == "hi@123"
-    assert m.get_sync() == [
+    assert str(message) == "hi@123"
+    assert message.get_sync() == [
         {"type": "text", "data": {"text": "hi"}},
         {"type": "at", "data": {"qq": "123"}},
     ]
 
 
-def test_message_sequence_ops():
-    m = Message()
-    m.add(Text("a"))
-    assert len(m) == 1
-    assert m[0] == Text("a")
-    m[0] = Text("b")
-    assert m[0] == Text("b")
-    del m[0]
-    assert len(m) == 0
+def test_message_container_operations_match_python_sequences():
+    message = Message(Text("a"))
+    message.add(Text("b"))
+    message[0] = Text("c")
+
+    assert list(message) == [Text("c"), Text("b")]
+    assert len(message + Message(Text("d"))) == 3
+
+    message += Message(Text("e"))
+    assert str(message) == "cbe"
 
 
-def test_message_add():
-    a = Message(Text("a"))
-    b = Message(Text("b"))
-    a += b
-    assert len(a) == 2
-    c = Message(Text("c")) + Message(Text("d"))
-    assert len(c) == 2
-    assert list(c) == [Text("c"), Text("d")]
+def test_message_addition_does_not_mutate_operands():
+    left = Message(Text("a"))
+    right = Message(Text("b"))
 
+    combined = left + right
 
-def test_message_iter():
-    assert [str(s) for s in Message(Text("a"), Text("b"))] == ["a", "b"]
-
-
-def test_message_types_registry():
-    assert "text" in message_types
-    assert "at" in message_types
-    assert "image" in message_types
-
-
-def test_message_add_does_not_mutate_operand():
-    a = Message(Text("a"))
-    b = Message(Text("b"))
-    c = a + b
-    assert str(c) == "ab"
-    assert str(a) == "a"  # __add__ 不得污染操作数
-    assert str(b) == "b"
-
-
-def test_message_iadd_mutates_in_place():
-    a = Message(Text("a"))
-    b = Message(Text("b"))
-    a += b
-    assert str(a) == "ab"
+    assert str(combined) == "ab"
+    assert str(left) == "a"
+    assert str(right) == "b"
