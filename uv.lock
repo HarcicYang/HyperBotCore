@@ -5,7 +5,9 @@ requires-python = ">=3.11"
 [manifest]
 members = [
     "hyper-bot",
+    "hyperot-adapter-milky",
     "hyperot-adapter-onebot",
+    "hyperot-adapter-satori",
 ]
 
 [[package]]
@@ -139,7 +141,9 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "hyperot-adapter-milky" },
     { name = "hyperot-adapter-onebot" },
+    { name = "hyperot-adapter-satori" },
     { name = "pyrefly" },
     { name = "pytest" },
     { name = "ruff" },
@@ -159,16 +163,64 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "hyperot-adapter-milky", editable = "adapters/milky" },
     { name = "hyperot-adapter-onebot", editable = "adapters/onebot" },
+    { name = "hyperot-adapter-satori", editable = "adapters/satori" },
     { name = "pyrefly", specifier = ">=1.2.0" },
     { name = "pytest", specifier = ">=9.1.1" },
     { name = "ruff", specifier = ">=0.16.1" },
 ]
 
 [[package]]
+name = "hyperot-adapter-milky"
+version = "2.0.1"
+source = { editable = "adapters/milky" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "httpx" },
+    { name = "hyper-bot" },
+    { name = "pydantic" },
+    { name = "uvicorn" },
+    { name = "websockets" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastapi", specifier = ">=0.141" },
+    { name = "httpx", specifier = ">=0.28" },
+    { name = "hyper-bot", editable = "." },
+    { name = "pydantic", specifier = ">=2.11" },
+    { name = "uvicorn", specifier = ">=0.52" },
+    { name = "websockets", specifier = ">=17" },
+]
+
+[[package]]
 name = "hyperot-adapter-onebot"
 version = "2.0.1"
 source = { editable = "adapters/onebot" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "httpx" },
+    { name = "hyper-bot" },
+    { name = "pydantic" },
+    { name = "uvicorn" },
+    { name = "websockets" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastapi", specifier = ">=0.141" },
+    { name = "httpx", specifier = ">=0.28" },
+    { name = "hyper-bot", editable = "." },
+    { name = "pydantic", specifier = ">=2.11" },
+    { name = "uvicorn", specifier = ">=0.52" },
+    { name = "websockets", specifier = ">=17" },
+]
+
+[[package]]
+name = "hyperot-adapter-satori"
+version = "2.0.1"
+source = { editable = "adapters/satori" }
 dependencies = [
     { name = "fastapi" },
     { name = "httpx" },

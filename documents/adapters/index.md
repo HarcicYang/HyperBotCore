@@ -6,6 +6,7 @@ V2 本体不绑定具体协议。每个适配器都有自己的安装方式、�
 
 - [Milky](milky.md)
 - [OneBot v11](onebot.md)
+- [Satori](satori.md)
 
 ## 适配器负责什么
 

@@ -1,6 +1,8 @@
 import asyncio
+import importlib.util
 import json
 import socket
+from pathlib import Path
 
 import httpx
 import uvicorn
@@ -8,9 +10,13 @@ from fastapi import FastAPI, Request, Response, WebSocket
 from hyperot_adapter_milky import MilkyConfig, create_adapter
 from starlette.responses import StreamingResponse
 
+from hyperot.v2 import Client
 from hyperot.v2.actions import GetVersionAction, SendMessageAction
 from hyperot.v2.common import SceneType
+from hyperot.v2.events import MessageReceivedEvent
 from hyperot.v2.messages import Message, Text
+
+_ROOT = Path(__file__).resolve().parents[3]
 
 GROUP_MESSAGE = {
     "time": 1700000000,
@@ -24,6 +30,12 @@ GROUP_MESSAGE = {
         "time": 1700000001,
         "segments": [{"type": "text", "data": {"text": "hi"}}],
     },
+}
+
+# The smoke scripts answer `.ping`, so the script-driven test pushes that content.
+PING_GROUP_MESSAGE = {
+    **GROUP_MESSAGE,
+    "data": {**GROUP_MESSAGE["data"], "segments": [{"type": "text", "data": {"text": ".ping"}}]},
 }
 
 
@@ -214,6 +226,62 @@ def test_sse_events():
             assert event.scene_id == "12345"  # type: ignore[attr-defined]
         finally:
             await adapter.stop()
+            await end.stop()
+
+    asyncio.run(run())
+
+
+def _load_smoke_script(name: str):
+    """Import a root-level smoke script by path, the way ``python <script>.py`` would."""
+    spec = importlib.util.spec_from_file_location(name, _ROOT / f"{name}.py")
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_smoke_script_replies_and_recalls(monkeypatch):
+    """Drive test_v2_milky's handler end to end against the fake protocol end."""
+    monkeypatch.setenv("HYPEROT_RECALL_DELAY", "0.05")
+    script = _load_smoke_script("test_v2_milky")
+
+    async def run() -> None:
+        end = FakeMilkyEnd()
+        port = await end.start()
+        client = Client(
+            create_adapter(),
+            MilkyConfig.model_validate({"connections": [{"type": "WebSocket", "url": f"ws://127.0.0.1:{port}"}]}),
+        )
+        client.subscribe(MessageReceivedEvent, script.handler_msg)
+        await client.start()
+        try:
+            await end.events.put(PING_GROUP_MESSAGE)
+            for _ in range(200):
+                if any(action == "recall_group_message" for action, _params in end.calls):
+                    break
+                await asyncio.sleep(0.05)
+
+            actions = [action for action, _params in end.calls]
+            assert actions == [
+                "get_impl_info",
+                "send_group_message",
+                "send_group_message",
+                "recall_group_message",
+            ]
+            sent = [params for action, params in end.calls if action == "send_group_message"]
+            assert sent[0] == {"group_id": 12345, "message": [{"type": "text", "data": {"text": "pong"}}]}
+            segments = sent[1]["message"]
+            assert sent[1]["group_id"] == 12345
+            assert segments[0] == {"type": "reply", "data": {"message_seq": 99}}
+            assert any(
+                segment["type"] == "text" and "Hello from HyperBotCore V2 1.0" in segment["data"]["text"]
+                for segment in segments
+            )
+            assert any(segment["type"] == "mention" for segment in segments)
+            assert any(segment["type"] == "image" for segment in segments)
+            assert end.calls[-1] == ("recall_group_message", {"group_id": 12345, "message_seq": 99})
+        finally:
+            await client.stop()
             await end.stop()
 
     asyncio.run(run())

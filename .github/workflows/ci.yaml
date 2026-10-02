@@ -37,6 +37,7 @@ jobs:
           uv build --package hyper-bot --out-dir dist/core
           uv build --package hyperot-adapter-onebot --out-dir dist/adapter
           uv build --package hyperot-adapter-milky --out-dir dist/adapter
+          uv build --package hyperot-adapter-satori --out-dir dist/adapter
 
       - name: Pytest
         run: uv run pytest

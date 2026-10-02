@@ -1,0 +1,28 @@
+[project]
+name = "hyperot-adapter-satori"
+version = "2.0.1"
+description = "Satori protocol adapter for HyperBotCore V2"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "hyper-bot>=2,<3",
+    "pydantic>=2.11",
+    "httpx>=0.28",
+    "websockets>=17",
+    "fastapi>=0.141",
+    "uvicorn>=0.52",
+]
+
+[project.entry-points."hyperot.adapters"]
+satori = "hyperot_adapter_satori:create_adapter"
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["hyperot_adapter_satori*"]
+
+[tool.setuptools.package-data]
+hyperot_adapter_satori = ["manifest.json"]

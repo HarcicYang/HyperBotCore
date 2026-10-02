@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "id": "satori",
+  "name": "Satori Protocol Adapter",
+  "package": "hyperot_adapter_satori",
+  "version": "2.0.1",
+  "api_version": 2,
+  "requires_hyperot": ">=2,<3",
+  "entrypoint": "hyperot_adapter_satori:create_adapter",
+  "protocol": "satori",
+  "platforms": []
+}

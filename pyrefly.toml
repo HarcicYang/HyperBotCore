@@ -1,6 +1,6 @@
-project-includes = ["src", "adapters/onebot/src", "adapters/milky/src"]
+project-includes = ["src", "adapters/onebot/src", "adapters/milky/src", "adapters/satori/src"]
 project-excludes = ["logic.py"]
-search-path = ["src", "adapters/onebot/src", "adapters/milky/src"]
+search-path = ["src", "adapters/onebot/src", "adapters/milky/src", "adapters/satori/src"]
 
 preset = "strict"
 python-version = "3.11"
