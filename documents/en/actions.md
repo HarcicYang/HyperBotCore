@@ -80,11 +80,11 @@ All API responses are wrapped in a generic `Ret[T]`:
 ```python
 res = await actions.send_msg("hello", group_id=123456)
 
-res.status    # str: "ok" / "failed"
+res.status  # str: "ok" / "failed"
 res.ret_code  # int: return code
-res.data      # T: typed response data
-res.echo      # str | None: request echo ID (None under the Milky protocol)
-res.raw       # dict: raw JSON
+res.data  # T: typed response data
+res.echo  # str | None: request echo ID (None under the Milky protocol)
+res.raw  # dict: raw JSON
 ```
 
 ### Response Data Types

@@ -66,9 +66,7 @@ def test_refused_websocket_reports_the_endpoint(monkeypatch):
 def test_failed_adapter_start_leaves_it_stopped(monkeypatch):
     _refuse(monkeypatch, ConnectionRefusedError(errno.ECONNREFUSED, "Connect call failed ('127.0.0.1', 5140)"))
     adapter = create_adapter()
-    config = adapter.config_type.model_validate(
-        {"connections": [{"type": "WebSocket", "url": "ws://127.0.0.1:5140"}]}
-    )
+    config = adapter.config_type.model_validate({"connections": [{"type": "WebSocket", "url": "ws://127.0.0.1:5140"}]})
 
     async def scenario() -> None:
         with pytest.raises(AdapterConnectionError):

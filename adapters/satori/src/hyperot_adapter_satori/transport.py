@@ -240,7 +240,9 @@ class SatoriHttpClient:
                 timeout=timeout,
             )
         except httpx.HTTPError as exc:
-            raise connection_error(exc, label="Satori", target=self.route_url("upload.create"), kind="HTTP call") from exc
+            raise connection_error(
+                exc, label="Satori", target=self.route_url("upload.create"), kind="HTTP call"
+            ) from exc
         data = _response_value(response, "upload.create")
         return {str(key): str(value) for key, value in data.items()} if isinstance(data, dict) else {}
 

@@ -549,6 +549,7 @@ class SatoriSegmentCodec:
     def _quote_decoder(self) -> SegmentDecoder:
         def decode(node: Node) -> Segment:
             return Quote(message_id=_packed_id(node.attr("id")), message=self._children_message(node))
+
         return decode
 
     def _message_decoder(self) -> SegmentDecoder:
@@ -562,6 +563,7 @@ class SatoriSegmentCodec:
                 )
             # <message id=".." forward/> forwards a message, so its id is a message id.
             return Forward(forward_id=_packed_id(node.attr("id")))
+
         return decode
 
     def _children_message(self, node: Node, skip: str | None = None) -> Message | None:

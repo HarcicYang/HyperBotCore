@@ -110,9 +110,7 @@ from hyperot.v2.events import MemberJoinedEvent
 
 
 async def welcome(event: MemberJoinedEvent, client: Client) -> None:
-    await client.api.scene(event.scene_type, event.scene_id).send(
-        f"欢迎 {event.member_id} 加入群聊"
-    )
+    await client.api.scene(event.scene_type, event.scene_id).send(f"欢迎 {event.member_id} 加入群聊")
 ```
 
 ## 文件与精华消息

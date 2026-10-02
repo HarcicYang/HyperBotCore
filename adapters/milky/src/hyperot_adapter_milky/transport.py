@@ -107,7 +107,9 @@ class MilkyHttpClient:
                 timeout=timeout,
             )
         except httpx.HTTPError as exc:
-            raise connection_error(exc, label="Milky", target=f"{self.base_url}/api/{action}", kind="HTTP call") from exc
+            raise connection_error(
+                exc, label="Milky", target=f"{self.base_url}/api/{action}", kind="HTTP call"
+            ) from exc
         if response.status_code == 401:
             raise AdapterConnectionError("Milky rejected the access token (HTTP 401)")
         if response.status_code == 404:

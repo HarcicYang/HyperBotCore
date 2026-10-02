@@ -213,9 +213,7 @@ def test_guild_member_request_packs_the_request_id():
 
 
 def test_guild_request_packs_the_request_id():
-    event = _translate(
-        _event("guild-request", guild=GUILD, user={"id": "20001"}, message={"id": "req2"})
-    )
+    event = _translate(_event("guild-request", guild=GUILD, user={"id": "20001"}, message={"id": "req2"}))
     assert isinstance(event, GroupInvitationReceivedEvent)
     assert event.inviter_id == "20001"
     assert decode_request_id(event.request_id) == ("guild", "guild1", "req2")

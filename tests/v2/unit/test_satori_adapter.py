@@ -57,9 +57,7 @@ class FakeTransport:
     def forget_login(self, login: dict) -> None:
         key = (login.get("platform"), (login.get("user") or {}).get("id"))
         self.logins = [
-            known
-            for known in self.logins
-            if (known.get("platform"), (known.get("user") or {}).get("id")) != key
+            known for known in self.logins if (known.get("platform"), (known.get("user") or {}).get("id")) != key
         ]
 
     async def start(self) -> None:
@@ -115,7 +113,9 @@ def test_login_events_teach_the_transports_about_the_login():
 
 
 def test_offline_login_is_forgotten():
-    adapter, transport = _started_adapter([{**LOGIN_EVENT, "type": "login-removed", "login": {**LOGIN_EVENT["login"], "status": 0}}])
+    adapter, transport = _started_adapter(
+        [{**LOGIN_EVENT, "type": "login-removed", "login": {**LOGIN_EVENT["login"], "status": 0}}]
+    )
     event = asyncio.run(adapter.receive())
     assert isinstance(event, BotOfflineEvent)
     assert transport.logins == []

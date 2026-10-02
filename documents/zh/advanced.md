@@ -42,11 +42,7 @@ from hyperot.segments import CustomNode
 from hyperot.common import Message
 from hyperot.segments import Text
 
-node = CustomNode(
-    user_id="123456",
-    nick_name="用户名",
-    content=Message(Text("转发内容"))
-)
+node = CustomNode(user_id="123456", nick_name="用户名", content=Message(Text("转发内容")))
 ```
 
 ## 进程重启
@@ -69,13 +65,15 @@ await cli.restart()  # 停止监听器并用 os.execv 重启进程
 from hyperot.adapters import Adapter, registry
 from hyperot.utils import KeyQueue
 
+
 def build_my_adapter() -> Adapter:
     return Adapter(
         name="MyProto",
-        actions_cls=MyActions,     # 继承 hyperot.protocol.ActionsBase
-        listener=MyListener(),     # 继承 hyperot.protocol.BaseListener
-        reports=KeyQueue(),        # echo 响应队列（无需 echo 机制可传空实例）
+        actions_cls=MyActions,  # 继承 hyperot.protocol.ActionsBase
+        listener=MyListener(),  # 继承 hyperot.protocol.BaseListener
+        reports=KeyQueue(),  # echo 响应队列（无需 echo 机制可传空实例）
     )
+
 
 registry.register_loader("MyProto", build_my_adapter)
 ```

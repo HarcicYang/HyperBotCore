@@ -90,18 +90,26 @@ def test_send_to_a_channel_scene():
     transport = FakeTransport({"message.create": [{"id": "m1"}]})
     registry = ActionRegistry()
     SatoriActions(transport, SatoriSegmentCodec(), 30.0, channel_index=ChannelIndex()).register_all(registry)
-    result = _run(registry, SendMessageAction(scene_type=SceneType.GUILD, scene_id="chan1", message=Message(Text(text="hi"))))
+    result = _run(
+        registry, SendMessageAction(scene_type=SceneType.GUILD, scene_id="chan1", message=Message(Text(text="hi")))
+    )
     assert result.message_id == "chan1:m1"
     assert transport.calls == [("message.create", {"channel_id": "chan1", "content": "hi"})]
 
 
 def test_send_to_a_guild_resolves_its_channel():
-    transport = FakeTransport({"channel.list": {"data": [{"id": "chan1", "type": 0, "name": "general"}], "next": None},
-                                "message.create": [{"id": "m9"}]})
+    transport = FakeTransport(
+        {
+            "channel.list": {"data": [{"id": "chan1", "type": 0, "name": "general"}], "next": None},
+            "message.create": [{"id": "m9"}],
+        }
+    )
     registry = ActionRegistry()
     actions = SatoriActions(transport, SatoriSegmentCodec(), 30.0)
     actions.register_all(registry)
-    result = _run(registry, SendMessageAction(scene_type=SceneType.GROUP, scene_id="guild1", message=Message(Text(text="hi"))))
+    result = _run(
+        registry, SendMessageAction(scene_type=SceneType.GROUP, scene_id="guild1", message=Message(Text(text="hi")))
+    )
     assert ("message.create", {"channel_id": "chan1", "content": "hi"}) in transport.calls
     assert result.message_id == "chan1:m9"
 

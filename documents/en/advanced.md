@@ -42,11 +42,7 @@ from hyperot.segments import CustomNode
 from hyperot.common import Message
 from hyperot.segments import Text
 
-node = CustomNode(
-    user_id="123456",
-    nick_name="Username",
-    content=Message(Text("Forwarded content"))
-)
+node = CustomNode(user_id="123456", nick_name="Username", content=Message(Text("Forwarded content")))
 ```
 
 ## Process Restart
@@ -69,13 +65,15 @@ Implement `ActionsBase` (all APIs) and `BaseListener` (hooks), then register:
 from hyperot.adapters import Adapter, registry
 from hyperot.utils import KeyQueue
 
+
 def build_my_adapter() -> Adapter:
     return Adapter(
         name="MyProto",
-        actions_cls=MyActions,     # subclass hyperot.protocol.ActionsBase
-        listener=MyListener(),     # subclass hyperot.protocol.BaseListener
-        reports=KeyQueue(),        # echo response queue (pass an empty one if not needed)
+        actions_cls=MyActions,  # subclass hyperot.protocol.ActionsBase
+        listener=MyListener(),  # subclass hyperot.protocol.BaseListener
+        reports=KeyQueue(),  # echo response queue (pass an empty one if not needed)
     )
+
 
 registry.register_loader("MyProto", build_my_adapter)
 ```

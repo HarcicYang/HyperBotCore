@@ -9,23 +9,20 @@ from hyperot.segments import Text, At, Image, Reply
 from hyperot.common import Message
 
 # 构造器
-msg = Message(
-    Reply(str(message_id)),
-    At(qq=str(user_id)),
-    Text(" 你好！")
-)
+msg = Message(Reply(str(message_id)), At(qq=str(user_id)), Text(" 你好！"))
 
 # 操作
 msg.add(Text("追加"))
-str(msg)              # 人类可读的字符串表示
-await msg.get()       # 序列化为 OneBot JSON 数组（异步）
-msg.get_sync()        # 同步版本
-msg + other_msg       # 拼接两个消息
+str(msg)  # 人类可读的字符串表示
+await msg.get()  # 序列化为 OneBot JSON 数组（异步）
+msg.get_sync()  # 同步版本
+msg + other_msg  # 拼接两个消息
 
 # 索引与迭代
-msg[0]                # 第一个消息段
-len(msg)              # 消息段数量
-for seg in msg: ...   # 迭代消息段
+msg[0]  # 第一个消息段
+len(msg)  # 消息段数量
+for seg in msg:
+    ...  # 迭代消息段
 ```
 
 ## 消息段类型
@@ -87,11 +84,7 @@ Image.build("./relative/path.png")  # 自动转为 file:// 绝对路径
 ```python
 from hyperot.segments import CustomNode
 
-node = CustomNode(
-    user_id="123456",
-    nick_name="用户名",
-    content=Message(Text("转发内容"))
-)
+node = CustomNode(user_id="123456", nick_name="用户名", content=Message(Text("转发内容")))
 ```
 
 ### KeyBoard
@@ -103,11 +96,11 @@ from hyperot.segments import KeyBoard, KeyBoardRow, KeyBoardButton
 
 btn = KeyBoardButton(
     text="确认",
-    style=1,         # 0=灰色, 1=蓝色
-    button_type=2,   # 2=回调
+    style=1,  # 0=灰色, 1=蓝色
+    button_type=2,  # 2=回调
     data="confirm",
     enter=False,
-    permission=2     # 0=所有人, 1=管理员, 2=指定用户
+    permission=2,  # 0=所有人, 1=管理员, 2=指定用户
 )
 row = KeyBoardRow([btn])
 kb = KeyBoard([row])

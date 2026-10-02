@@ -47,13 +47,13 @@ hyperot.init()  # 加载配置、初始化适配器
 from hyperot import Client
 from hyperot.events import GroupMessageEvent
 
+
 async def handler(event, actions):
     if str(event.message) == ".ping":
         await actions.send_msg(
-            f"pong! HypeR Core {hyperot.HYPER_BOT_VERSION}",
-            group_id=event.group_id,
-            user_id=event.user_id
+            f"pong! HypeR Core {hyperot.HYPER_BOT_VERSION}", group_id=event.group_id, user_id=event.user_id
         )
+
 
 with Client() as cli:
     cli.subscribe(handler, GroupMessageEvent)

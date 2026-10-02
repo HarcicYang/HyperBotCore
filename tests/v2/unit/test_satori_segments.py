@@ -58,7 +58,7 @@ def test_parse_keeps_unclosed_start_tags_as_elements():
 
 
 def test_parse_attribute_grammar():
-    nodes = parse('<t a="1" b=\'2\' c d no-e/>')
+    nodes = parse("<t a=\"1\" b='2' c d no-e/>")
     assert nodes == [Node(tag="t", attrs={"a": "1", "b": "2", "c": True, "d": True, "e": False})]
 
 
@@ -80,9 +80,9 @@ def test_parse_trims_line_leading_and_trailing_space_runs():
 
 
 def test_escape_and_unescape_round_trip():
-    assert escape('a<b>&"c') == "a&lt;b&gt;&amp;\"c"
-    assert escape('a"b', True) == 'a&quot;b'
-    assert unescape("a&lt;b&gt;&amp;&quot;c&#39;&#x27;") == 'a<b>&"c\'\''
+    assert escape('a<b>&"c') == 'a&lt;b&gt;&amp;"c'
+    assert escape('a"b', True) == "a&quot;b"
+    assert unescape("a&lt;b&gt;&amp;&quot;c&#39;&#x27;") == "a<b>&\"c''"
     assert unescape("&amp;#38;") == "&#38;"
 
 

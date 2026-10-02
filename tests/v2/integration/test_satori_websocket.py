@@ -54,6 +54,7 @@ class FakeSatoriEnd:
             identify = json.loads(await websocket.receive_text())
             self.identified.append(identify)
             await websocket.send_text(json.dumps({"op": 4, "body": {"logins": [LOGIN], "proxy_urls": []}}))
+
             # Drain the heartbeat signals in the background so the close handshake
             # the adapter starts on shutdown completes instead of timing out.
             async def drain() -> None:
@@ -219,9 +220,7 @@ def test_smoke_script_replies_uploads_and_recalls(monkeypatch):
         port = await end.start()
         client = Client(
             create_adapter(),
-            SatoriConfig.model_validate(
-                {"connections": [{"type": "WebSocket", "url": f"ws://127.0.0.1:{port}"}]}
-            ),
+            SatoriConfig.model_validate({"connections": [{"type": "WebSocket", "url": f"ws://127.0.0.1:{port}"}]}),
         )
         client.subscribe(MessageReceivedEvent, script.handler_msg)
         await client.start()

@@ -9,23 +9,20 @@ from hyperot.segments import Text, At, Image, Reply
 from hyperot.common import Message
 
 # Constructor
-msg = Message(
-    Reply(str(message_id)),
-    At(qq=str(user_id)),
-    Text(" Hello!")
-)
+msg = Message(Reply(str(message_id)), At(qq=str(user_id)), Text(" Hello!"))
 
 # Operations
 msg.add(Text("more"))
-str(msg)              # Human-readable string representation
-await msg.get()       # Serialize to OneBot JSON array (async)
-msg.get_sync()        # Synchronous version
-msg + other_msg       # Concatenate two messages
+str(msg)  # Human-readable string representation
+await msg.get()  # Serialize to OneBot JSON array (async)
+msg.get_sync()  # Synchronous version
+msg + other_msg  # Concatenate two messages
 
 # Indexing & iteration
-msg[0]                # First segment
-len(msg)              # Number of segments
-for seg in msg: ...   # Iterate segments
+msg[0]  # First segment
+len(msg)  # Number of segments
+for seg in msg:
+    ...  # Iterate segments
 ```
 
 ## Segment Types
@@ -87,11 +84,7 @@ Used to build nodes for forwarding messages:
 ```python
 from hyperot.segments import CustomNode
 
-node = CustomNode(
-    user_id="123456",
-    nick_name="Username",
-    content=Message(Text("Forwarded content"))
-)
+node = CustomNode(user_id="123456", nick_name="Username", content=Message(Text("Forwarded content")))
 ```
 
 ### KeyBoard
@@ -103,11 +96,11 @@ from hyperot.segments import KeyBoard, KeyBoardRow, KeyBoardButton
 
 btn = KeyBoardButton(
     text="Confirm",
-    style=1,         # 0=grey, 1=blue
-    button_type=2,   # 2=callback
+    style=1,  # 0=grey, 1=blue
+    button_type=2,  # 2=callback
     data="confirm",
     enter=False,
-    permission=2     # 0=all, 1=admin, 2=specified
+    permission=2,  # 0=all, 1=admin, 2=specified
 )
 row = KeyBoardRow([btn])
 kb = KeyBoard([row])

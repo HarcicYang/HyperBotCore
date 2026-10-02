@@ -50,9 +50,7 @@ await client.api.group(group_id).send("你好")
 发送完整消息：
 
 ```python
-await client.api.group(group_id).send(
-    Message(Text(text="图片："), Image(source="https://example.com/a.png"))
-)
+await client.api.group(group_id).send(Message(Text(text="图片："), Image(source="https://example.com/a.png")))
 ```
 
 最通用的发送方式是使用当前事件所在的场景：

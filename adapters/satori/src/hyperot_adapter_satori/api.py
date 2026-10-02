@@ -33,9 +33,7 @@ class SatoriChannelAPI(SceneAPI):
     channel_id: str
 
     async def messages(self, limit: int = 50) -> list[Message]:
-        return await self._context.execute(
-            SatoriMessageListAction(channel_id=self.channel_id, limit=limit)
-        )
+        return await self._context.execute(SatoriMessageListAction(channel_id=self.channel_id, limit=limit))
 
 
 @dataclass(frozen=True, slots=True)

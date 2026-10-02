@@ -168,7 +168,6 @@ class SatoriAdapter:
                     transport.remember_login(login)
 
 
-
 def _login_of(event: Event) -> dict[str, Any] | None:
     if isinstance(event, SatoriBotOnlineEvent | SatoriBotOfflineEvent | SatoriLoginChangedEvent):
         return {
